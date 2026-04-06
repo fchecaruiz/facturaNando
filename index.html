@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>facturaNando</title>
+    <link rel="stylesheet" href="facturaNando.css">
+</head>
+<body class="vibrant-mode">
+    <div class="container">
+        <h1>facturaNando - Gestión de Avisos y Facturación</h1>
+
+        <section id="aviso-form-section">
+            <div class="card">
+                <h3>Añadir Nuevo Aviso</h3>
+                <form id="aviso-form">
+                    <label for="numeroAviso">Número de Aviso:</label>
+                    <input type="text" id="numeroAviso" required>
+
+                    <label for="fechaAviso">Fecha del Aviso:</label>
+                    <input type="date" id="fechaAviso" required>
+
+                    <label for="aseguradora">Aseguradora:</label>
+                    <div class="select-container">
+                        <select id="aseguradora">
+                            <option value="">Selecciona Aseguradora</option>
+                        </select>
+                        <button type="button" class="manage-btn" onclick="app.openManageModal('aseguradora')">Gestionar</button>
+                    </div>
+                    
+                    <label for="marca">Marca:</label>
+                    <div class="select-container">
+                        <select id="marca">
+                            <option value="">Selecciona Marca</option>
+                        </select>
+                        <button type="button" class="manage-btn" onclick="app.openManageModal('marca')">Gestionar</button>
+                    </div>
+
+                    <label for="tipoAparato">Tipo de Aparato:</label>
+                    <div class="select-container">
+                        <select id="tipoAparato">
+                            <option value="">Selecciona Tipo de Aparato</option>
+                        </select>
+                        <button type="button" class="manage-btn" onclick="app.openManageModal('tipoAparato')">Gestionar</button>
+                    </div>
+
+                    <h4>Detalles de Facturación:</h4>
+                    <label for="manoObra">Mano de Obra (€):</label>
+                    <input type="number" id="manoObra" step="0.01" value="0">
+
+                    <label for="desplazamientoKm">Desplazamiento (km):</label>
+                    <input type="number" id="desplazamientoKm" step="0.1" value="0">
+
+                    <label for="codigoRecambio">Código de Recambio:</label>
+                    <input type="text" id="codigoRecambio">
+
+                    <label for="importeRecambios">Importe Recambios (€):</label>
+                    <input type="number" id="importeRecambios" step="0.01" value="0">
+
+                    <button type="submit" id="guardar-aviso-btn">Guardar Aviso</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="avisos-list-section">
+            <div class="card">
+                <h3>Resumen de Avisos</h3>
+                <div class="filter-controls">
+                    <label for="filtroAseguradora">Filtrar por Aseguradora:</label>
+                    <select id="filtroAseguradora">
+                        <option value="">Todas</option>
+                    </select>
+                    
+                    <label for="filtroAno">Año:</label>
+                    <select id="filtroAno"></select>
+                    
+                    <label for="filtroMes">Mes:</label>
+                    <select id="filtroMes">
+                        <option value="">Todos</option>
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                    
+                    <button id="aplicar-filtro-btn" onclick="app.displayAvisos()">Aplicar Filtro</button>
+                </div>
+                <div id="avisos-list">
+                    <!-- Los avisos se cargarán aquí -->
+                </div>
+            </div>
+        </section>
+        
+        <section id="facturacion-section">
+            <div class="card">
+                <h3>Facturación</h3>
+                <p>Selecciona los avisos a facturar desde el resumen de avisos.</p>
+                <div id="factura-preview">
+                    <!-- Detalles de la factura se cargarán aquí -->
+                </div>
+                <button id="generar-factura-pdf" disabled>Generar Factura en PDF</button>
+            </div>
+        </section>
+
+        <section id="datos-factura-section">
+            <div class="card">
+                <h3>Datos de Facturación (Emisor y Receptor)</h3>
+                <form id="datos-emisor-form">
+                    <h4>Datos del Emisor</h4>
+                    <label for="emisorNombre">Nombre:</label>
+                    <input type="text" id="emisorNombre" value="FERNANDO CHECA RUIZ">
+                    <label for="emisorDireccion">Dirección:</label>
+                    <input type="text" id="emisorDireccion" value="C/ REYES CATOLICOS Nº 1">
+                    <label for="emisorLocalidad">Localidad:</label>
+                    <input type="text" id="emisorLocalidad" value="42110 OLVEGA (SORIA)">
+                    <label for="emisorDni">DNI:</label>
+                    <input type="text" id="emisorDni" value="16.807.738-M">
+                    <label for="emisorTelf">Teléfono:</label>
+                    <input type="text" id="emisorTelf" value="68-29-64-59">
+                    <label for="emisorEmail">Email:</label>
+                    <input type="email" id="emisorEmail" value="fchecaruiz@gmail.com">
+                    <label for="emisorCuenta">Nº Cuenta:</label>
+                    <input type="text" id="emisorCuenta" value="ES71 2085 9611 10 0300041000">
+                    <label for="emisorBanco">Banco:</label>
+                    <input type="text" id="emisorBanco" value="IBERCAJA">
+                </form>
+
+                <form id="datos-receptor-form">
+                    <h4>Datos del Receptor</h4>
+                    <label for="receptorNombre">Nombre:</label>
+                    <input type="text" id="receptorNombre" value="REPARACIONES TECNICAS DUERO S.L.U.">
+                    <label for="receptorDireccion">Dirección:</label>
+                    <input type="text" id="receptorDireccion" value="C/ CASCANTE Nº 7 BAJO">
+                    <label for="receptorLocalidad">Localidad:</label>
+                    <input type="text" id="receptorLocalidad" value="42100 AGREDA (SORIA)">
+                    <label for="receptorCif">CIF:</label>
+                    <input type="text" id="receptorCif" value="B-01953504">
+                    <label for="receptorEmail">Email:</label>
+                    <input type="email" id="receptorEmail" value="electroduero@hotmail.com">
+                    <label for="receptorTelf">Teléfono:</label>
+                    <input type="text" id="receptorTelf" value="686-252-248">
+                </form>
+                <button id="guardar-datos-btn" onclick="app.guardarDatosFacturacion()">Guardar Datos de Facturación</button>
+            </div>
+        </section>
+
+        <!-- Modal para gestionar opciones -->
+        <div id="manage-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3 id="modal-title">Gestionar Opciones</h3>
+                <div id="modal-body">
+                    <!-- Contenido dinámico -->
+                </div>
+            </div>
+        </div>
+
+        <div id="toast-container"></div>
+    </div>
+    <script src="facturaNando.js"></script>
+</body>
+</html>

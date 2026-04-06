@@ -1,0 +1,481 @@
+/* Modo Vibrante */
+body.vibrant-mode {
+    background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+    color: #333;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+body.vibrant-mode .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border: 3px solid rgba(255, 255, 255, 0.5);
+}
+
+body.vibrant-mode h1 {
+    color: #fff;
+    text-align: center;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2.5rem;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+body.vibrant-mode h3 {
+    color: #ff6b6b;
+    text-align: center;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    font-size: 1.5rem;
+}
+
+body.vibrant-mode .card {
+    background: linear-gradient(135deg, #a8edea, #fed6e3);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(5px);
+}
+
+body.vibrant-mode form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #45b7d1;
+    font-size: 1.1rem;
+}
+
+body.vibrant-mode form input[type="text"],
+body.vibrant-mode form input[type="number"],
+body.vibrant-mode form input[type="date"],
+body.vibrant-mode form input[type="email"],
+body.vibrant-mode form select {
+    width: calc(100% - 22px);
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: rgba(248, 249, 250, 0.8);
+    color: #333;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+body.vibrant-mode form input[type="text"]:focus,
+body.vibrant-mode form input[type="number"]:focus,
+body.vibrant-mode form input[type="date"]:focus,
+body.vibrant-mode form input[type="email"]:focus,
+body.vibrant-mode form select:focus {
+    border-color: #4ecdc4;
+    box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+    outline: none;
+    background: rgba(255, 255, 255, 1);
+}
+
+body.vibrant-mode .select-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+body.vibrant-mode .select-container select {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+body.vibrant-mode .manage-btn {
+    background: linear-gradient(45deg, #ff9a9e, #fecfef);
+    color: #333;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    min-width: 100px;
+}
+
+body.vibrant-mode .manage-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.vibrant-mode form button {
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+body.vibrant-mode form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.vibrant-mode #guardar-datos-btn {
+    background: linear-gradient(45deg, #96ceb4, #feca57);
+    color: #333;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+body.vibrant-mode #guardar-datos-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+body.vibrant-mode #generar-factura-pdf {
+    background: linear-gradient(45deg, #00ff00, #00cc00);
+    color: #000;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+body.vibrant-mode #generar-factura-pdf:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 255, 0, 0.6);
+}
+
+body.vibrant-mode #generar-factura-pdf:disabled {
+    background: linear-gradient(45deg, #cccccc, #999999);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+body.vibrant-mode #aplicar-filtro-btn {
+    background: linear-gradient(45deg, #ff9a44, #ff6b6b);
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+body.vibrant-mode #aplicar-filtro-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+body.vibrant-mode .filter-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    background: rgba(78, 205, 196, 0.15);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+body.vibrant-mode .filter-controls label {
+    margin-bottom: 0;
+    font-weight: normal;
+    color: #45b7d1;
+}
+
+body.vibrant-mode .filter-controls select,
+body.vibrant-mode .filter-controls button {
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: 2px solid #ddd;
+    background: rgba(248, 249, 250, 0.8);
+    color: #333;
+}
+
+body.vibrant-mode .aviso-item {
+    background: linear-gradient(135deg, #d4fc79, #96e6a1);
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+body.vibrant-mode .aviso-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    border-color: #4ecdc4;
+}
+
+body.vibrant-mode .aviso-item input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.3);
+}
+
+/* Botones de edición y eliminación con color */
+body.vibrant-mode .edit-btn-small,
+body.vibrant-mode .delete-btn-small {
+    padding: 6px 12px;
+    margin: 0 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+body.vibrant-mode .edit-btn-small {
+    background: linear-gradient(45deg, #4ecdc4, #44a08d);
+    color: white;
+}
+
+body.vibrant-mode .delete-btn-small {
+    background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+    color: white;
+}
+
+body.vibrant-mode .edit-btn-small:hover,
+body.vibrant-mode .delete-btn-small:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.vibrant-mode #factura-preview {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    border: 2px dashed #4ecdc4;
+    padding: 20px;
+    margin-top: 20px;
+    min-height: 150px;
+    border-radius: 8px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+    color: white;
+}
+
+/* Colores para importes importantes - AZUL en lugar de amarillo */
+body.vibrant-mode .importe-principal {
+    color: #00b894;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+body.vibrant-mode .importe-secundario {
+    color: #0984e3;
+    font-weight: bold;
+}
+
+body.vibrant-mode .importe-destacado {
+    color: #e17055;
+    font-weight: bold;
+    font-size: 1.3em;
+}
+
+/* Modal Styles */
+body.vibrant-mode .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+body.vibrant-mode .modal-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 15px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+body.vibrant-mode .close {
+    color: #fff;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+body.vibrant-mode .close:hover {
+    color: #ff6b6b;
+    transform: rotate(90deg);
+}
+
+body.vibrant-mode .modal h3 {
+    color: white;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+}
+
+body.vibrant-mode .option-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin: 5px 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+body.vibrant-mode .option-item:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateX(5px);
+}
+
+body.vibrant-mode .option-item button {
+    padding: 5px 10px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+body.vibrant-mode .delete-btn {
+    background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+    color: white;
+}
+
+body.vibrant-mode .edit-btn {
+    background: linear-gradient(45deg, #4ecdc4, #44a08d);
+    color: white;
+}
+
+body.vibrant-mode .add-option-form {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    align-items: center;
+}
+
+body.vibrant-mode .add-option-form input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #ddd;
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+}
+
+body.vibrant-mode .add-option-form button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    background: linear-gradient(45deg, #96ceb4, #88d8b0);
+    color: #333;
+}
+
+body.vibrant-mode #toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+}
+
+body.vibrant-mode .toast {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    font-weight: bold;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+body.vibrant-mode .toast.show {
+    opacity: 1;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body.vibrant-mode .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    body.vibrant-mode .select-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    body.vibrant-mode .manage-btn {
+        width: 100%;
+        margin-top: 5px;
+    }
+    
+    body.vibrant-mode .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    body.vibrant-mode .aviso-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    body.vibrant-mode .aviso-actions {
+        margin-top: 10px;
+        align-self: flex-end;
+    }
+}
