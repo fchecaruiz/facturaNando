@@ -2,21 +2,21 @@
 /* Conserva todo lo anterior... (reemplaza tu fichero con este contenido) */
 
 :root{
-  --bg-0: #081229;                 /* fondo oscuro profundo */
-  --bg-1: #0f3b4a;                 /* tono secundario del fondo */
-  --card-0: linear-gradient(180deg,#08263a,#0b3f55); /* tarjetas */
-  --accent: #ff7a18;               /* acento naranja */
-  --accent-2: #ffd166;             /* acento claro */
-  --muted: #b8d8e6;                /* texto secundario */
-  --text: #f6fbff;                 /* texto principal */
-  --success: #2ee6a3;              /* éxito / verde */
-  --danger: #ff4b4b;               /* peligro / rojo */
-  --blue-money: #0091ff;           /* color para importes secundarios (azul) */
-  --fluor-green: #39ff14;          /* botón "verde fluorescente" */
-  --rojo-visible: #ffb6c1;         /* color para inputs select visibles */
-  --billing-bg: linear-gradient(135deg,#021826,#063246); /* fondo bloque facturación */
-  --cerrado-bg: linear-gradient(90deg,#39ff14,#00e676);   /* fondo indicador cerrado */
-  --abierto-bg: linear-gradient(90deg,#3a3f52,#2d3240);   /* fondo indicador abierto */
+  --bg-0: #0b111a;
+  --bg-1: #141d2a;
+  --card-0: linear-gradient(180deg,#172233,#111a29);
+  --accent: #1f6feb;
+  --accent-2: #2ea8ff;
+  --muted: #9fb0c4;
+  --text: #e6edf3;
+  --success: #2fbf71;
+  --danger: #d94a4a;
+  --blue-money: #4f8cff;
+  --fluor-green: #39ff14;
+  --rojo-visible: #ff8a8a;
+  --billing-bg: linear-gradient(135deg,#0e1624,#121c2d);
+  --cerrado-bg: linear-gradient(90deg,#1f9d5a,#2fbf71);
+  --abierto-bg: linear-gradient(90deg,#3a4657,#263140);
 }
 
 /* Botones principales más contrastados */
@@ -40,25 +40,25 @@
 body.vibrant-mode{
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin:0; padding:20px; min-height:100vh;
-  background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+  background: radial-gradient(circle at 10% 10%, #202b3d 0%, #121a27 38%, #0b111a 100%);
   color: var(--text);
 }
 
 .container{
   max-width:1200px; margin:0 auto;
   padding:22px; border-radius:12px;
-  background: linear-gradient(135deg, rgba(102,126,234,0.12), rgba(118,75,162,0.08));
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  border: 1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(145deg, rgba(24,33,48,0.92), rgba(14,21,34,0.92));
+  box-shadow: 0 18px 46px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
 h1{ text-align:center; margin:0 0 8px; font-size:1.9rem; color:var(--text); }
 h3{ margin:0 0 18px; color:var(--muted); }
 
 .card{
-  background: linear-gradient(135deg, rgba(168,237,234,0.06), rgba(254,214,227,0.04));
+  background: linear-gradient(160deg, rgba(28,40,58,0.85), rgba(18,27,41,0.85));
   padding:16px; border-radius:10px; margin-bottom:14px;
-  border:1px solid rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.08);
 }
 
 /* Billing card (oscuro) */
@@ -70,7 +70,7 @@ h3{ margin:0 0 18px; color:var(--muted); }
   border:1px solid rgba(255,255,255,0.04);
 }
 .billing-section{
-  background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(255,255,255,0.02));
+  background: linear-gradient(180deg, rgba(7,11,18,0.65), rgba(25,37,56,0.45));
   padding:12px; border-radius:8px;
 }
 
@@ -78,8 +78,8 @@ h3{ margin:0 0 18px; color:var(--muted); }
 label{ display:block; margin-bottom:6px; color:var(--muted); font-weight:700; }
 input[type="text"], input[type="number"], input[type="date"], input[type="email"], select {
   width:100%; padding:10px 12px; border-radius:8px; margin-bottom:10px;
-  border:1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
+  border:1px solid rgba(255,255,255,0.12);
+  background: rgba(7,12,20,0.7);
   color: var(--rojo-visible) !important;
   font-weight:800; box-sizing:border-box;
 }
@@ -125,7 +125,7 @@ button:active{ transform:scale(0.98); }
 
 /* Avisos list */
 .aviso-item{ display:flex; justify-content:space-between; gap:12px; padding:12px; border-radius:8px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); border:1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(90deg, rgba(22,33,48,0.8), rgba(13,21,32,0.8)); border:1px solid rgba(255,255,255,0.09);
 }
 .aviso-left{ display:flex; gap:8px; align-items:flex-start; }
 .aviso-item strong{ color:var(--rojo-visible); font-weight:900; }

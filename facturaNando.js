@@ -1,5 +1,20 @@
+import { initializeApp as initializeFirebaseApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, doc, getDoc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
 /* facturaNando.js - actualizado: recuadro "CERRADO" y selección/facturación solo para cerrados.
    Sustituye completamente tu fichero facturaNando.js por este contenido. */
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCF19HLZvvKOliKkaTvUF0DYU1ZlDgC_jM",
+    authDomain: "facturanando-8b9bc.firebaseapp.com",
+    projectId: "facturanando-8b9bc",
+    storageBucket: "facturanando-8b9bc.firebasestorage.app",
+    messagingSenderId: "362743885899",
+    appId: "1:362743885899:web:173750df2270d7a8cc1dce"
+};
+
+const firebaseWebApp = initializeFirebaseApp(firebaseConfig);
+const firestoreDb = getFirestore(firebaseWebApp);
 
 const app = {
     avisos: [],
@@ -41,8 +56,44 @@ const app = {
     },
     ultimoNumeroFactura: 0,
     selectionMode: null,
+    firebaseReady: false,
+    firebaseDocRef: null,
+    firebaseUnsubscribe: null,
+    cloudSaveTimer: null,
+    isApplyingRemoteState: false,
 
-    init: function() {
+    createUniqueAvisoId() {
+        // IDs estables y únicos para evitar colisiones al alternar cerrado/abierto.
+        return `av-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    },
+
+    ensureUniqueAvisoIds() {
+        if (!Array.isArray(this.avisos)) this.avisos = [];
+        const usedIds = new Set();
+        let changed = false;
+
+        this.avisos = this.avisos.map((aviso) => {
+            const currentId = aviso && aviso.id != null ? String(aviso.id) : '';
+            const needsNewId = !currentId || usedIds.has(currentId);
+
+            if (needsNewId) {
+                let newId = this.createUniqueAvisoId();
+                while (usedIds.has(newId)) {
+                    newId = this.createUniqueAvisoId();
+                }
+                usedIds.add(newId);
+                changed = true;
+                return { ...aviso, id: newId };
+            }
+
+            usedIds.add(currentId);
+            return { ...aviso, id: currentId };
+        });
+
+        return changed;
+    },
+
+    init: async function() {
         this.loadData();
         this.loadOpciones();
         this.loadDatosFacturacion();
@@ -50,6 +101,102 @@ const app = {
         this.populateFilterOptions();
         this.setupEventListeners();
         this.displayAvisos();
+        await this.initFirebaseRealtime();
+    },
+
+    getSharedStatePayload() {
+        return {
+            avisos: Array.isArray(this.avisos) ? this.avisos : [],
+            opciones: {
+                aseguradora: Array.isArray(this.opciones?.aseguradora) ? this.opciones.aseguradora : [],
+                marca: Array.isArray(this.opciones?.marca) ? this.opciones.marca : [],
+                tipoAparato: Array.isArray(this.opciones?.tipoAparato) ? this.opciones.tipoAparato : []
+            },
+            ultimoNumeroFactura: Number(this.ultimoNumeroFactura) || 0,
+            datosFacturacion: this.datosFacturacion,
+            updatedAt: Date.now()
+        };
+    },
+
+    applySharedState(state) {
+        if (!state || typeof state !== 'object') return;
+
+        this.isApplyingRemoteState = true;
+        try {
+            if (Array.isArray(state.avisos)) {
+                this.avisos = state.avisos;
+            }
+
+            if (state.opciones && typeof state.opciones === 'object') {
+                this.opciones = {
+                    aseguradora: Array.isArray(state.opciones.aseguradora) ? state.opciones.aseguradora : this.opciones.aseguradora,
+                    marca: Array.isArray(state.opciones.marca) ? state.opciones.marca : this.opciones.marca,
+                    tipoAparato: Array.isArray(state.opciones.tipoAparato) ? state.opciones.tipoAparato : this.opciones.tipoAparato
+                };
+            }
+
+            if (state.ultimoNumeroFactura != null) {
+                this.ultimoNumeroFactura = parseInt(state.ultimoNumeroFactura, 10) || 0;
+            }
+
+            if (state.datosFacturacion && typeof state.datosFacturacion === 'object') {
+                this.datosFacturacion = {
+                    emisor: { ...this.datosFacturacion.emisor, ...(state.datosFacturacion.emisor || {}) },
+                    receptor: { ...this.datosFacturacion.receptor, ...(state.datosFacturacion.receptor || {}) }
+                };
+            }
+
+            const idsCorregidos = this.ensureUniqueAvisoIds();
+            this.saveData();
+            this.populateSelects();
+            this.populateFilterOptions();
+            this.renderDatosFacturacionInputs();
+            this.displayAvisos();
+            if (idsCorregidos) this.scheduleCloudSave();
+        } finally {
+            this.isApplyingRemoteState = false;
+        }
+    },
+
+    async initFirebaseRealtime() {
+        try {
+            this.firebaseDocRef = doc(firestoreDb, 'facturaNando', 'sharedState');
+            const current = await getDoc(this.firebaseDocRef);
+
+            if (current.exists()) {
+                this.applySharedState(current.data());
+            } else {
+                await setDoc(this.firebaseDocRef, this.getSharedStatePayload());
+            }
+
+            this.firebaseUnsubscribe = onSnapshot(this.firebaseDocRef, (snapshot) => {
+                if (!snapshot.exists()) return;
+                this.applySharedState(snapshot.data());
+            }, (err) => {
+                console.error('Error en escucha tiempo real de Firebase', err);
+                this.showToast('danger', 'Error de conexión en tiempo real. Modo local activo.', 5000);
+            });
+
+            this.firebaseReady = true;
+            this.showToast('success', 'Firebase conectado. Sincronización en tiempo real activa.', 3500);
+        } catch (err) {
+            console.error('No se pudo inicializar Firebase', err);
+            this.firebaseReady = false;
+            this.showToast('info', 'Firebase no disponible. Se mantiene guardado local.', 5000);
+        }
+    },
+
+    scheduleCloudSave() {
+        if (!this.firebaseReady || !this.firebaseDocRef || this.isApplyingRemoteState) return;
+        if (this.cloudSaveTimer) clearTimeout(this.cloudSaveTimer);
+
+        this.cloudSaveTimer = setTimeout(async () => {
+            try {
+                await setDoc(this.firebaseDocRef, this.getSharedStatePayload());
+            } catch (err) {
+                console.error('Error guardando en Firebase', err);
+            }
+        }, 180);
     },
 
     // --- Storage ---
@@ -59,6 +206,8 @@ const app = {
             if (s) this.avisos = JSON.parse(s);
             const u = localStorage.getItem('ultimoNumeroFactura');
             if (u) this.ultimoNumeroFactura = parseInt(u, 10) || 0;
+            const idsCorregidos = this.ensureUniqueAvisoIds();
+            if (idsCorregidos) this.saveData();
         } catch (err) {
             console.warn('Error leyendo avisos desde localStorage', err);
             this.avisos = [];
@@ -89,6 +238,10 @@ const app = {
             localStorage.setItem('facturaNandoAvisos', JSON.stringify(this.avisos));
             localStorage.setItem('facturaNandoOpciones', JSON.stringify(this.opciones));
             localStorage.setItem('ultimoNumeroFactura', String(this.ultimoNumeroFactura));
+            localStorage.setItem('datosEmisor', JSON.stringify(this.datosFacturacion.emisor));
+            localStorage.setItem('datosReceptor', JSON.stringify(this.datosFacturacion.receptor));
+            localStorage.setItem('facturaNandoSharedState', JSON.stringify(this.getSharedStatePayload()));
+            this.scheduleCloudSave();
         } catch (err) {
             console.error('Error guardando datos en localStorage', err);
         }
@@ -105,6 +258,10 @@ const app = {
             console.warn('Error cargando datos de facturación', err);
         }
 
+        this.renderDatosFacturacionInputs();
+    },
+
+    renderDatosFacturacionInputs() {
         const setIf = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
         setIf('emisorNombre', this.datosFacturacion.emisor.nombre);
         setIf('emisorDireccion', this.datosFacturacion.emisor.direccion);
@@ -141,8 +298,7 @@ const app = {
             email: document.getElementById('receptorEmail').value,
             telf: document.getElementById('receptorTelf').value
         };
-        localStorage.setItem('datosEmisor', JSON.stringify(this.datosFacturacion.emisor));
-        localStorage.setItem('datosReceptor', JSON.stringify(this.datosFacturacion.receptor));
+        this.saveData();
         this.showToast('success','Datos guardados correctamente', 4000);
     },
 
@@ -344,7 +500,7 @@ const app = {
             document.getElementById('guardar-aviso-btn').textContent = 'Guardar Aviso';
             this.showToast('info','Aviso actualizado', 4000);
         } else {
-            const nuevo = { id: Date.now(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, seleccionado:false, cerrado:false };
+            const nuevo = { id: this.createUniqueAvisoId(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, seleccionado:false, cerrado:false };
             this.avisos.push(nuevo);
             this.showToast('success','Aviso registrado', 4000);
         }
