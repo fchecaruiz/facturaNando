@@ -2,22 +2,39 @@
 /* Conserva todo lo anterior... (reemplaza tu fichero con este contenido) */
 
 :root{
-  --bg-0: #071025;
-  --bg-1: #112b45;
-  --card-0: linear-gradient(180deg,#08223a,#0b3650);
-  --accent: #00b0ff;
-  --accent-2: #00e0ff;
-  --muted: #a9c3d9;
-  --text: #e9f6ff;
-  --success: #00e676;
-  --danger: #ff3b30;
-  --blue-money: #0984e3;
-  --fluor-green: #39ff14;
-  --rojo-visible: #ff3b30;
-  --billing-bg: linear-gradient(135deg,#021826,#062233);
-  --cerrado-bg: linear-gradient(90deg,#00ff66,#00e676);
-  --abierto-bg: linear-gradient(90deg,#44475a,#2f3542);
+  --bg-0: #081229;                 /* fondo oscuro profundo */
+  --bg-1: #0f3b4a;                 /* tono secundario del fondo */
+  --card-0: linear-gradient(180deg,#08263a,#0b3f55); /* tarjetas */
+  --accent: #ff7a18;               /* acento naranja */
+  --accent-2: #ffd166;             /* acento claro */
+  --muted: #b8d8e6;                /* texto secundario */
+  --text: #f6fbff;                 /* texto principal */
+  --success: #2ee6a3;              /* éxito / verde */
+  --danger: #ff4b4b;               /* peligro / rojo */
+  --blue-money: #0091ff;           /* color para importes secundarios (azul) */
+  --fluor-green: #39ff14;          /* botón "verde fluorescente" */
+  --rojo-visible: #ffb6c1;         /* color para inputs select visibles */
+  --billing-bg: linear-gradient(135deg,#021826,#063246); /* fondo bloque facturación */
+  --cerrado-bg: linear-gradient(90deg,#39ff14,#00e676);   /* fondo indicador cerrado */
+  --abierto-bg: linear-gradient(90deg,#3a3f52,#2d3240);   /* fondo indicador abierto */
 }
+
+/* Botones principales más contrastados */
+#aplicar-filtro-btn{
+  background: linear-gradient(90deg,#ff7a18,#ff3b30); /* naranja -> rojo */
+  color:#fff;
+  box-shadow: 0 8px 20px rgba(255,122,24,0.18);
+}
+
+#generar-factura-pdf{
+  background: linear-gradient(90deg, var(--fluor-green), #00ff88); /* verde fluorescente */
+  color:#021425;
+  font-weight:900;
+  box-shadow: 0 10px 30px rgba(57,255,20,0.14);
+}
+
+.edit-btn-small{ background: linear-gradient(90deg,#17c3b2,#4ecdc4); color:#021425; }
+.delete-btn-small{ background: linear-gradient(90deg,#ff4b4b,#ff7a7a); color:#fff; }
 
 /* Global */
 body.vibrant-mode{
