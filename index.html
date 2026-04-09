@@ -18,7 +18,10 @@
             <label for="numeroAviso">Nº Aviso</label>
             <input id="numeroAviso" type="text" placeholder="Ej: 1000001" />
             <label for="fechaAviso">Fecha</label>
-            <input id="fechaAviso" type="date" />
+            <div class="date-field">
+              <input id="fechaAviso" type="date" />
+              <button type="button" id="open-date-picker" class="date-picker-btn" aria-label="Abrir calendario">Cal</button>
+            </div>
             <label for="aseguradora">Aseguradora</label>
             <div class="select-container">
               <select id="aseguradora"></select>

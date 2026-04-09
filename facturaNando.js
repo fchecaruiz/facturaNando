@@ -363,6 +363,19 @@ const app = {
 
         // Guardar datos facturación
         document.getElementById('guardar-datos-btn').addEventListener('click', () => this.guardarDatosFacturacion());
+
+        const openDatePickerBtn = document.getElementById('open-date-picker');
+        const fechaInput = document.getElementById('fechaAviso');
+        if (openDatePickerBtn && fechaInput) {
+            openDatePickerBtn.addEventListener('click', () => {
+                if (typeof fechaInput.showPicker === 'function') {
+                    fechaInput.showPicker();
+                } else {
+                    fechaInput.focus();
+                    fechaInput.click();
+                }
+            });
+        }
     },
 
     // --- Selects ---
