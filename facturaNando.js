@@ -1,18 +1,21 @@
+/* facturaNando.js - actualizado: recuadro "CERRADO" y selección/facturación solo para cerrados.
+   Sustituye completamente tu fichero facturaNando.js por este contenido. */
+
 const app = {
     avisos: [],
     opciones: {
         aseguradora: [
-            "SEJESCAR", "MESOS GESTION", "CATALANA OCCIDENTE", 
-            "SARETEKNIKA", "SIGMA REPARACIONES", "CORBERO", 
+            "SEJESCAR", "MESOS GESTION", "CATALANA OCCIDENTE",
+            "SARETEKNIKA", "SIGMA REPARACIONES", "CORBERO",
             "HISENSE", "SVAN", "ASPES", "HIUNDAY"
         ],
         marca: [
-            "CORBERO", "HISENSE", "SVAN", "ASPES", "HIUNDAY"
+            "CORBERO", "HISENSE", "SVAN", "ASPES", "HIUNDAY", "SONY", "LG", "BOSCH"
         ],
         tipoAparato: [
-            "LAVADORA", "FRIGORÍFICO", "LAVAVAJILLAS", "HORNO", 
-            "MICROONDAS", "TV", "AIRE ACONDICIONADO", "SECADORA", 
-            "CONGELADOR", "CALEFACCIÓN", "VENTILADOR", "ASPIRADORA", 
+            "LAVADORA", "FRIGORÍFICO", "LAVAVAJILLAS", "HORNO",
+            "MICROONDAS", "TV", "AIRE ACONDICIONADO", "SECADORA",
+            "CONGELADOR", "CALEFACCIÓN", "VENTILADOR", "ASPIRADORA",
             "CAFETERA", "TOSTADORA", "BATIDORA", "OTROS"
         ]
     },
@@ -37,71 +40,89 @@ const app = {
         }
     },
     ultimoNumeroFactura: 0,
-    
+    selectionMode: null,
+
     init: function() {
         this.loadData();
         this.loadOpciones();
-        this.setupEventListeners();
-        this.displayAvisos();
-        this.populateFilterOptions();
         this.loadDatosFacturacion();
         this.populateSelects();
+        this.populateFilterOptions();
+        this.setupEventListeners();
+        this.displayAvisos();
     },
 
-    loadData: function() {
-        const storedAvisos = localStorage.getItem('facturaNandoAvisos');
-        if (storedAvisos) {
-            this.avisos = JSON.parse(storedAvisos);
+    // --- Storage ---
+    loadData() {
+        try {
+            const s = localStorage.getItem('facturaNandoAvisos');
+            if (s) this.avisos = JSON.parse(s);
+            const u = localStorage.getItem('ultimoNumeroFactura');
+            if (u) this.ultimoNumeroFactura = parseInt(u, 10) || 0;
+        } catch (err) {
+            console.warn('Error leyendo avisos desde localStorage', err);
+            this.avisos = [];
+            this.ultimoNumeroFactura = 0;
+            this.saveData();
         }
-        const storedUltimoNumero = localStorage.getItem('ultimoNumeroFactura');
-        if (storedUltimoNumero) {
-            this.ultimoNumeroFactura = parseInt(storedUltimoNumero, 10) || 0;
+    },
+    loadOpciones() {
+        try {
+            const stored = localStorage.getItem('facturaNandoOpciones');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                this.opciones = {
+                    aseguradora: Array.isArray(parsed.aseguradora) ? parsed.aseguradora : this.opciones.aseguradora,
+                    marca: Array.isArray(parsed.marca) ? parsed.marca : this.opciones.marca,
+                    tipoAparato: Array.isArray(parsed.tipoAparato) ? parsed.tipoAparato : this.opciones.tipoAparato
+                };
+            } else {
+                localStorage.setItem('facturaNandoOpciones', JSON.stringify(this.opciones));
+            }
+        } catch (err) {
+            console.warn('Error leyendo opciones desde localStorage, usando valores por defecto', err);
+            localStorage.setItem('facturaNandoOpciones', JSON.stringify(this.opciones));
+        }
+    },
+    saveData() {
+        try {
+            localStorage.setItem('facturaNandoAvisos', JSON.stringify(this.avisos));
+            localStorage.setItem('facturaNandoOpciones', JSON.stringify(this.opciones));
+            localStorage.setItem('ultimoNumeroFactura', String(this.ultimoNumeroFactura));
+        } catch (err) {
+            console.error('Error guardando datos en localStorage', err);
         }
     },
 
-    loadOpciones: function() {
-        const storedOpciones = localStorage.getItem('facturaNandoOpciones');
-        if (storedOpciones) {
-            this.opciones = JSON.parse(storedOpciones);
-        }
-    },
-
-    saveData: function() {
-        localStorage.setItem('facturaNandoAvisos', JSON.stringify(this.avisos));
-        localStorage.setItem('facturaNandoOpciones', JSON.stringify(this.opciones));
-        localStorage.setItem('ultimoNumeroFactura', this.ultimoNumeroFactura.toString());
-    },
-
-    loadDatosFacturacion: function() {
-        const storedEmisor = localStorage.getItem('datosEmisor');
-        const storedReceptor = localStorage.getItem('datosReceptor');
-
-        if (storedEmisor) {
-            this.datosFacturacion.emisor = JSON.parse(storedEmisor);
-        }
-        if (storedReceptor) {
-            this.datosFacturacion.receptor = JSON.parse(storedReceptor);
+    // --- Datos facturación ---
+    loadDatosFacturacion() {
+        try {
+            const em = localStorage.getItem('datosEmisor');
+            const re = localStorage.getItem('datosReceptor');
+            if (em) this.datosFacturacion.emisor = JSON.parse(em);
+            if (re) this.datosFacturacion.receptor = JSON.parse(re);
+        } catch (err) {
+            console.warn('Error cargando datos de facturación', err);
         }
 
-        // Cargar en el formulario
-        document.getElementById('emisorNombre').value = this.datosFacturacion.emisor.nombre;
-        document.getElementById('emisorDireccion').value = this.datosFacturacion.emisor.direccion;
-        document.getElementById('emisorLocalidad').value = this.datosFacturacion.emisor.localidad;
-        document.getElementById('emisorDni').value = this.datosFacturacion.emisor.dni;
-        document.getElementById('emisorTelf').value = this.datosFacturacion.emisor.telf;
-        document.getElementById('emisorEmail').value = this.datosFacturacion.emisor.email;
-        document.getElementById('emisorCuenta').value = this.datosFacturacion.emisor.cuenta;
-        document.getElementById('emisorBanco').value = this.datosFacturacion.emisor.banco;
+        const setIf = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        setIf('emisorNombre', this.datosFacturacion.emisor.nombre);
+        setIf('emisorDireccion', this.datosFacturacion.emisor.direccion);
+        setIf('emisorLocalidad', this.datosFacturacion.emisor.localidad);
+        setIf('emisorDni', this.datosFacturacion.emisor.dni);
+        setIf('emisorTelf', this.datosFacturacion.emisor.telf);
+        setIf('emisorEmail', this.datosFacturacion.emisor.email);
+        setIf('emisorCuenta', this.datosFacturacion.emisor.cuenta);
+        setIf('emisorBanco', this.datosFacturacion.emisor.banco);
 
-        document.getElementById('receptorNombre').value = this.datosFacturacion.receptor.nombre;
-        document.getElementById('receptorDireccion').value = this.datosFacturacion.receptor.direccion;
-        document.getElementById('receptorLocalidad').value = this.datosFacturacion.receptor.localidad;
-        document.getElementById('receptorCif').value = this.datosFacturacion.receptor.cif;
-        document.getElementById('receptorEmail').value = this.datosFacturacion.receptor.email;
-        document.getElementById('receptorTelf').value = this.datosFacturacion.receptor.telf;
+        setIf('receptorNombre', this.datosFacturacion.receptor.nombre);
+        setIf('receptorDireccion', this.datosFacturacion.receptor.direccion);
+        setIf('receptorLocalidad', this.datosFacturacion.receptor.localidad);
+        setIf('receptorCif', this.datosFacturacion.receptor.cif);
+        setIf('receptorEmail', this.datosFacturacion.receptor.email);
+        setIf('receptorTelf', this.datosFacturacion.receptor.telf);
     },
-
-    guardarDatosFacturacion: function() {
+    guardarDatosFacturacion() {
         this.datosFacturacion.emisor = {
             nombre: document.getElementById('emisorNombre').value,
             direccion: document.getElementById('emisorDireccion').value,
@@ -120,710 +141,644 @@ const app = {
             email: document.getElementById('receptorEmail').value,
             telf: document.getElementById('receptorTelf').value
         };
-
         localStorage.setItem('datosEmisor', JSON.stringify(this.datosFacturacion.emisor));
         localStorage.setItem('datosReceptor', JSON.stringify(this.datosFacturacion.receptor));
-        this.showToast('Datos guardados correctamente');
+        this.showToast('success','Datos guardados correctamente', 4000);
     },
 
-    setupEventListeners: function() {
+    // --- Eventos ---
+    setupEventListeners() {
         document.getElementById('aviso-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            this.addAviso();
+            this.addOrUpdateAviso();
         });
 
+        document.getElementById('buscadorAvisos').addEventListener('input', () => this.displayAvisos());
+        document.getElementById('limpiar-busqueda').addEventListener('click', () => { document.getElementById('buscadorAvisos').value = ''; this.displayAvisos(); });
         document.getElementById('filtroAseguradora').addEventListener('change', () => this.displayAvisos());
         document.getElementById('filtroAno').addEventListener('change', () => this.displayAvisos());
         document.getElementById('filtroMes').addEventListener('change', () => this.displayAvisos());
-    
+        document.getElementById('aplicar-filtro-btn').addEventListener('click', () => this.displayAvisos());
+
+        document.getElementById('sel-all').addEventListener('click', () => this.bulkSelect('all'));
+        document.getElementById('sel-none').addEventListener('click', () => this.bulkSelect('none'));
+        document.getElementById('sel-month').addEventListener('click', () => this.openSelectionModal('month'));
+        document.getElementById('sel-week').addEventListener('click', () => this.openSelectionModal('week'));
+        document.getElementById('sel-year').addEventListener('click', () => this.openSelectionModal('year'));
+
         document.getElementById('avisos-list').addEventListener('change', (e) => {
-            if (e.target.type === 'checkbox' && e.target.classList.contains('aviso-checkbox')) {
-                const avisoId = parseInt(e.target.dataset.id);
-                const aviso = this.avisos.find(a => a.id === avisoId);
-                if (aviso) {
-                    aviso.seleccionado = e.target.checked;
+            if (e.target && e.target.classList.contains('aviso-checkbox')) {
+                const id = e.target.dataset.id;
+                const avis = this.avisos.find(a => String(a.id) === String(id));
+                if (avis) {
+                    // Solo permitir seleccionar si está cerrado (defensa extra)
+                    if (!avis.cerrado) {
+                        e.target.checked = false;
+                        this.showToast('info','El aviso no está cerrado. No se puede facturar.', 4000);
+                        return;
+                    }
+                    avis.seleccionado = e.target.checked;
+                    this.saveData();
                     this.updateFacturaPreview();
                 }
             }
         });
 
-        document.getElementById('generar-factura-pdf').addEventListener('click', () => {
-            this.generarFacturaPDF();
-        });
+        document.getElementById('generar-factura-pdf').addEventListener('click', () => this.generarFacturaPDF());
 
-        // Modal close button
-        document.querySelector('.close').addEventListener('click', () => {
-            document.getElementById('manage-modal').style.display = 'none';
-        });
-
-        window.addEventListener('click', (event) => {
+        // Modal manage
+        document.querySelector('#manage-modal .close').addEventListener('click', () => document.getElementById('manage-modal').style.display = 'none');
+        window.addEventListener('click', (ev) => {
             const modal = document.getElementById('manage-modal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
+            if (ev.target === modal) modal.style.display = 'none';
+            const selModal = document.getElementById('select-modal');
+            if (ev.target === selModal) selModal.style.display = 'none';
         });
+
+        // Buttons to open manage modal
+        document.getElementById('manage-aseg-btn').addEventListener('click', () => this.openManageModal('aseguradora'));
+        document.getElementById('manage-marca-btn').addEventListener('click', () => this.openManageModal('marca'));
+        document.getElementById('manage-tipo-btn').addEventListener('click', () => this.openManageModal('tipoAparato'));
+
+        // Selection modal
+        document.querySelector('#select-modal .close-select').addEventListener('click', () => this.closeSelectionModal());
+        document.getElementById('cancel-selection-btn').addEventListener('click', () => this.closeSelectionModal());
+        document.getElementById('apply-selection-btn').addEventListener('click', () => this.applySelectionFromModal());
+
+        // Guardar datos facturación
+        document.getElementById('guardar-datos-btn').addEventListener('click', () => this.guardarDatosFacturacion());
     },
 
-    populateSelects: function() {
+    // --- Selects ---
+    populateSelects() {
         this.populateSelect('aseguradora');
         this.populateSelect('marca');
         this.populateSelect('tipoAparato');
-        this.populateFilterOptions();
     },
-
-    populateSelect: function(selectId) {
-        const selectElement = document.getElementById(selectId);
-        if (!selectElement) return;
-        
-        // Guardar valor actual
-        const currentValue = selectElement.value;
-        
-        // Limpiar opciones
-        selectElement.innerHTML = '<option value="">Selecciona ' + 
-            (selectId === 'aseguradora' ? 'Aseguradora' : 
-             selectId === 'marca' ? 'Marca' : 'Tipo de Aparato') + '</option>';
-        
-        // Añadir opciones
-        this.opciones[selectId].forEach(option => {
-            const newOption = document.createElement('option');
-            newOption.value = option;
-            newOption.textContent = option;
-            selectElement.appendChild(newOption);
+    populateSelect(selectId) {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const cur = sel.value || '';
+        sel.innerHTML = `<option value="">Selecciona ${selectId === 'aseguradora' ? 'Aseguradora' : selectId === 'marca' ? 'Marca' : 'Tipo de Aparato'}</option>`;
+        if (!Array.isArray(this.opciones[selectId])) this.opciones[selectId] = [];
+        this.opciones[selectId].forEach(opt => {
+            const o = document.createElement('option'); o.value = opt; o.textContent = opt; sel.appendChild(o);
         });
-        
-        // Restaurar valor si existe
-        if (currentValue && this.opciones[selectId].includes(currentValue)) {
-            selectElement.value = currentValue;
-        }
+        if (cur && this.opciones[selectId].includes(cur)) sel.value = cur;
     },
 
-    openManageModal: function(tipo) {
+    populateFilterOptions() {
+        const filtroAseg = document.getElementById('filtroAseguradora');
+        filtroAseg.innerHTML = '<option value="">Todas</option>';
+        if (!Array.isArray(this.opciones.aseguradora)) this.opciones.aseguradora = [];
+        this.opciones.aseguradora.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; filtroAseg.appendChild(o); });
+
+        const selAno = document.getElementById('filtroAno');
+        const anos = [...new Set(this.avisos.map(av => av.fechaAviso ? new Date(av.fechaAviso + 'T00:00:00').getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+        selAno.innerHTML = '<option value="">Todos</option>';
+        anos.forEach(ano => { const o = document.createElement('option'); o.value = ano; o.textContent = ano; selAno.appendChild(o); });
+    },
+
+    // --- Modal gestionar opciones ---
+    openManageModal(tipo) {
         const modal = document.getElementById('manage-modal');
         const modalTitle = document.getElementById('modal-title');
         const modalBody = document.getElementById('modal-body');
-        
+
+        if (!this.opciones[tipo]) this.opciones[tipo] = [];
+
         modalTitle.textContent = `Gestionar ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
-        
-        let content = '<div class="option-list">';
-        this.opciones[tipo].forEach((opcion, index) => {
-            content += `
-                <div class="option-item">
-                    <span>${opcion}</span>
-                    <div>
-                        <button class="edit-btn" onclick="app.editOption(\'${tipo}\', ${index})">Editar</button>
-                        <button class="delete-btn" onclick="app.deleteOption(\'${tipo}\', ${index})">Eliminar</button>
-                    </div>
-                </div>
-            `;
-        });
-        content += '</div>';
-        
-        content += `
-            <div class="add-option-form">
-                <input type="text" id="nueva-opcion-${tipo}" placeholder="Añadir nueva opción">
-                <button onclick="app.addOption(\'${tipo}\')">Añadir</button>
-            </div>
-        `;
-        
-        modalBody.innerHTML = content;
+
+        let html = '<div class="option-list">';
+        if (this.opciones[tipo].length === 0) {
+            html += `<div class="option-item"><span>No hay opciones todavía</span></div>`;
+        } else {
+            this.opciones[tipo].forEach((op, idx) => {
+                html += `<div class="option-item">
+                            <span>${op}</span>
+                            <div>
+                                <button class="edit-btn" data-idx="${idx}" data-tipo="${tipo}">Editar</button>
+                                <button class="delete-btn" data-idx="${idx}" data-tipo="${tipo}">Eliminar</button>
+                            </div>
+                         </div>`;
+            });
+        }
+        html += `</div>
+            <div class="add-option-form" style="display:flex; gap:8px; margin-top:10px;">
+                <input type="text" id="nueva-opcion-${tipo}" placeholder="Añadir nueva opción..." style="flex:1">
+                <button id="add-btn-${tipo}">Añadir</button>
+            </div>`;
+
+        modalBody.innerHTML = html;
         modal.style.display = 'block';
-    },
 
-    addOption: function(tipo) {
-        const input = document.getElementById(`nueva-opcion-${tipo}`);
-        const newValue = input.value.trim().toUpperCase();
-        
-        if (newValue && !this.opciones[tipo].includes(newValue)) {
-            this.opciones[tipo].push(newValue);
-            this.saveData();
-            this.populateSelects();
-            input.value = '';
-            this.openManageModal(tipo); // Recargar modal
-        }
-    },
-
-    editOption: function(tipo, index) {
-        const oldValue = this.opciones[tipo][index];
-        const newValue = prompt('Editar opción:', oldValue);
-        
-        if (newValue !== null && newValue.trim() !== '' && newValue.trim().toUpperCase() !== oldValue) {
-            const trimmedNewValue = newValue.trim().toUpperCase();
-            if (!this.opciones[tipo].includes(trimmedNewValue)) {
-                this.opciones[tipo][index] = trimmedNewValue;
+        // attach button handlers
+        modalBody.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.onclick = () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                const tipoLocal = btn.dataset.tipo;
+                const nuevo = prompt('Modifica la opción:', this.opciones[tipoLocal][idx]);
+                if (nuevo === null) return;
+                const up = nuevo.trim().toUpperCase();
+                if (!up) return this.showToast('info','Texto vacío', 4000);
+                if (this.opciones[tipoLocal].includes(up)) return this.showToast('info','La opción ya existe', 4000);
+                this.opciones[tipoLocal][idx] = up;
                 this.saveData();
-                this.populateSelects();
-                this.openManageModal(tipo); // Recargar modal
-            }
+                this.openManageModal(tipoLocal);
+            };
+        });
+        modalBody.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.onclick = () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                const tipoLocal = btn.dataset.tipo;
+                if (!confirm('Eliminar opción?')) return;
+                this.opciones[tipoLocal].splice(idx,1);
+                this.saveData();
+                this.openManageModal(tipoLocal);
+            };
+        });
+
+        const addBtn = document.getElementById(`add-btn-${tipo}`);
+        if (addBtn) {
+            addBtn.onclick = () => {
+                const input = document.getElementById(`nueva-opcion-${tipo}`);
+                if (!input) return;
+                const val = input.value.trim();
+                if (!val) { this.showToast('info','Introduce texto para añadir', 4000); return; }
+                const up = val.toUpperCase();
+                if (!Array.isArray(this.opciones[tipo])) this.opciones[tipo] = [];
+                if (this.opciones[tipo].includes(up)) { this.showToast('info','La opción ya existe', 4000); input.value=''; return; }
+                this.opciones[tipo].push(up);
+                this.saveData();
+                this.openManageModal(tipo);
+                this.showToast('success','Opción añadida', 4000);
+            };
         }
     },
 
-    deleteOption: function(tipo, index) {
-        if (confirm('¿Estás seguro de eliminar esta opción?')) {
-            this.opciones[tipo].splice(index, 1);
-            this.saveData();
-            this.populateSelects();
-            this.openManageModal(tipo); // Recargar modal
-        }
-    },
-
-    addAviso: function() {
+    addOrUpdateAviso() {
+        const form = document.getElementById('aviso-form');
+        const editId = form.dataset.editId || '';
         const numeroAviso = document.getElementById('numeroAviso').value.trim();
-
-        if (this.avisos.some(aviso => aviso.numeroAviso === numeroAviso)) {
-            this.showToast('Número de aviso duplicado');
-            return;
-        }
-
         const fechaAviso = document.getElementById('fechaAviso').value;
         const aseguradora = document.getElementById('aseguradora').value;
         const marca = document.getElementById('marca').value;
         const tipoAparato = document.getElementById('tipoAparato').value;
         const manoObra = parseFloat(document.getElementById('manoObra').value) || 0;
         const desplazamientoKm = parseFloat(document.getElementById('desplazamientoKm').value) || 0;
-        const importeDesplazamiento = desplazamientoKm * 0.30; // Precio fijo por km
+        const importeDesplazamiento = parseFloat((desplazamientoKm * 0.30).toFixed(2));
         const codigoRecambio = document.getElementById('codigoRecambio').value;
         const importeRecambios = parseFloat(document.getElementById('importeRecambios').value) || 0;
 
-        const nuevoAviso = {
-            id: Date.now(),
-            numeroAviso,
-            fechaAviso,
-            aseguradora,
-            marca,
-            tipoAparato,
-            manoObra,
-            desplazamientoKm,
-            importeDesplazamiento: parseFloat(importeDesplazamiento.toFixed(2)),
-            codigoRecambio,
-            importeRecambios,
-            seleccionado: false
-        };
+        if (!numeroAviso) { this.showToast('info','Introduce número de aviso', 4000); return; }
 
-        this.avisos.push(nuevoAviso);
+        if (!editId && this.avisos.some(a=>a.numeroAviso === numeroAviso)) { this.showToast('danger','Número de aviso duplicado', 4000); return; }
+
+        if (editId) {
+            const idx = this.avisos.findIndex(a=>String(a.id)===String(editId));
+            if (idx===-1) { this.showToast('danger','Aviso no encontrado para actualizar', 4000); return; }
+            // Preserve cerrado / seleccionado states
+            const preserved = { cerrado: this.avisos[idx].cerrado || false, seleccionado: this.avisos[idx].seleccionado || false };
+            this.avisos[idx] = { ...this.avisos[idx], numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, ...preserved };
+            delete form.dataset.editId;
+            document.getElementById('guardar-aviso-btn').textContent = 'Guardar Aviso';
+            this.showToast('info','Aviso actualizado', 4000);
+        } else {
+            const nuevo = { id: Date.now(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, seleccionado:false, cerrado:false };
+            this.avisos.push(nuevo);
+            this.showToast('success','Aviso registrado', 4000);
+        }
         this.saveData();
-        this.showToast('Aviso registrado');
-        document.getElementById('aviso-form').reset();
         this.displayAvisos();
         this.populateFilterOptions();
+        form.reset();
     },
 
-    deleteAviso: function(id) {
-        if (confirm('¿Estás seguro de eliminar este aviso?')) {
-            this.avisos = this.avisos.filter(aviso => aviso.id !== id);
-            this.saveData();
-            this.displayAvisos();
-            this.updateFacturaPreview();
-        }
+    toggleCerrado(id) {
+        const idx = this.avisos.findIndex(a => String(a.id) === String(id));
+        if (idx === -1) return;
+        this.avisos[idx].cerrado = !this.avisos[idx].cerrado;
+        // If marking as abierto, also unselect for facturación
+        if (!this.avisos[idx].cerrado) this.avisos[idx].seleccionado = false;
+        this.saveData();
+        this.displayAvisos();
     },
 
-    editAviso: function(id) {
-        const aviso = this.avisos.find(a => a.id === id);
-        if (!aviso) return;
-
-        // Rellenar formulario con datos del aviso
-        document.getElementById('numeroAviso').value = aviso.numeroAviso;
-        document.getElementById('fechaAviso').value = aviso.fechaAviso;
-        document.getElementById('aseguradora').value = aviso.aseguradora;
-        document.getElementById('marca').value = aviso.marca;
-        document.getElementById('tipoAparato').value = aviso.tipoAparato;
-        document.getElementById('manoObra').value = aviso.manoObra;
-        document.getElementById('desplazamientoKm').value = aviso.desplazamientoKm;
-        document.getElementById('codigoRecambio').value = aviso.codigoRecambio;
-        document.getElementById('importeRecambios').value = aviso.importeRecambios;
-
-        // Eliminar aviso actual
-        this.avisos = this.avisos.filter(a => a.id !== id);
+    deleteAviso(id) {
+        if (!confirm('¿Estás seguro de eliminar este aviso?')) return;
+        const idx = this.avisos.findIndex(a => String(a.id)===String(id));
+        if (idx === -1) return;
+        const removed = this.avisos.splice(idx,1);
         this.saveData();
         this.displayAvisos();
         this.updateFacturaPreview();
-
-        // Scroll al formulario
-        document.getElementById('aviso-form-section').scrollIntoView({ behavior: 'smooth' });
-        
-        // Cambiar texto del botón
-        document.getElementById('guardar-aviso-btn').textContent = 'Actualizar Aviso';
-        
-        // Añadir identificador temporal
-        document.getElementById('aviso-form').dataset.editId = id;
+        this.showToast('danger', `Aviso ${removed[0].numeroAviso} eliminado`, 4000);
     },
 
-    displayAvisos: function() {
-        const avisosListDiv = document.getElementById('avisos-list');
-        avisosListDiv.innerHTML = '';
+    editAviso(id) {
+        const avis = this.avisos.find(a => String(a.id) === String(id));
+        if (!avis) return;
+        // Fill form and set editId (do NOT remove from array)
+        document.getElementById('numeroAviso').value = avis.numeroAviso;
+        document.getElementById('fechaAviso').value = avis.fechaAviso;
+        document.getElementById('aseguradora').value = avis.aseguradora;
+        document.getElementById('marca').value = avis.marca;
+        document.getElementById('tipoAparato').value = avis.tipoAparato;
+        document.getElementById('manoObra').value = avis.manoObra;
+        document.getElementById('desplazamientoKm').value = avis.desplazamientoKm;
+        document.getElementById('codigoRecambio').value = avis.codigoRecambio;
+        document.getElementById('importeRecambios').value = avis.importeRecambios;
 
-        const filtroAseguradora = document.getElementById('filtroAseguradora').value;
+        document.getElementById('aviso-form').dataset.editId = id;
+        document.getElementById('guardar-aviso-btn').textContent = 'Actualizar Aviso';
+        document.getElementById('aviso-form-section').scrollIntoView({ behavior: 'smooth' });
+        this.showToast('info','Editando aviso (actualiza y guarda)', 4000);
+    },
+
+    displayAvisos() {
+        const container = document.getElementById('avisos-list');
+        container.innerHTML = '';
+        const query = (document.getElementById('buscadorAvisos').value || '').trim().toLowerCase();
+        const filtroAseg = document.getElementById('filtroAseguradora').value;
         const filtroAno = document.getElementById('filtroAno').value;
         const filtroMes = document.getElementById('filtroMes').value;
 
-        const filteredAvisos = this.avisos.filter(aviso => {
-            const avisoDate = new Date(aviso.fechaAviso + 'T00:00:00');
-            const year = avisoDate.getFullYear().toString();
-            const month = (avisoDate.getMonth() + 1).toString();
-
-            const matchAseguradora = filtroAseguradora ? aviso.aseguradora === filtroAseguradora : true;
-            const matchAno = filtroAno ? year === filtroAno : true;
-            const matchMes = filtroMes ? month === filtroMes : true;
-            
-            return matchAseguradora && matchAno && matchMes;
+        const filtered = this.avisos.filter(av => {
+            const dt = av.fechaAviso ? new Date(av.fechaAviso + 'T00:00:00') : null;
+            const year = dt ? String(dt.getFullYear()) : '';
+            const month = dt ? String(dt.getMonth() + 1) : '';
+            let matchQuery = true;
+            if (query) {
+                const hay = `${av.numeroAviso} ${av.aseguradora} ${av.marca} ${av.tipoAparato} ${year}`.toLowerCase();
+                matchQuery = hay.includes(query);
+            }
+            const matchAseg = filtroAseg ? av.aseguradora === filtroAseg : true;
+            const matchYear = filtroAno ? year === filtroAno : true;
+            const matchMonth = filtroMes ? month === filtroMes : true;
+            return matchQuery && matchAseg && matchYear && matchMonth;
         });
 
-        if (filteredAvisos.length === 0) {
-            avisosListDiv.innerHTML = '<p class="no-avisos">No hay avisos para los filtros seleccionados.</p>';
-            this.updateFacturaPreview();
-            return;
-        }
+        if (!filtered.length) { container.innerHTML = '<p class="no-avisos">No hay avisos para los filtros/búsqueda.</p>'; this.updateFacturaPreview(); return; }
 
-        filteredAvisos.forEach(aviso => {
-            const avisoDiv = document.createElement('div');
-            avisoDiv.classList.add('aviso-item');
-            const checked = aviso.seleccionado ? 'checked' : '';
-            avisoDiv.innerHTML = `
-                <div>
-                    <input type="checkbox" class="aviso-checkbox" data-id="${aviso.id}" ${checked}>
-                    <strong>Nº Aviso:</strong> ${aviso.numeroAviso}<br>
-                    <strong>Fecha:</strong> ${aviso.fechaAviso}<br>
-                    <strong>Aseguradora:</strong> ${aviso.aseguradora}<br>
-                    <strong>Marca:</strong> ${aviso.marca}<br>
-                    <strong>Tipo Aparato:</strong> ${aviso.tipoAparato}<br>
-                    <strong>M. Obra:</strong> <span class="importe-principal">${aviso.manoObra.toFixed(2)}€</span> | 
-                    <strong>Desplazamiento:</strong> ${aviso.desplazamientoKm.toFixed(1)} km (<span class="importe-secundario">${aviso.importeDesplazamiento.toFixed(2)}€</span>) |
-                    <strong>Recambios:</strong> <span class="importe-principal">${aviso.importeRecambios.toFixed(2)}€</span> (Cód: ${aviso.codigoRecambio || 'N/A'})
+        filtered.forEach(av => {
+            const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
+            const base75 = parseFloat((subtotal * 0.75).toFixed(2));
+            const base25 = parseFloat((subtotal * 0.25).toFixed(2));
+
+            const div = document.createElement('div'); div.className = 'aviso-item';
+            div.innerHTML = `
+                <div class="aviso-left">
+                    <input type="checkbox" class="aviso-checkbox" data-id="${av.id}" ${av.seleccionado ? 'checked' : ''} ${av.cerrado ? '' : 'disabled'}>
+                    <div style="display:inline-block; margin-left:8px;">
+                        <strong>Nº Aviso:</strong> ${av.numeroAviso}<br>
+                        <small><strong>Fecha:</strong> ${av.fechaAviso || ''} — <strong>Aseg:</strong> ${av.aseguradora || ''} — <strong>Marca:</strong> ${av.marca || ''}</small><br>
+                        <small><strong>Tipo:</strong> ${av.tipoAparato || ''}</small><br>
+                        <small><strong>Subtotal:</strong> <span class="importe-principal">${subtotal.toFixed(2)}€</span> | <strong>75%:</strong> <span class="importe-secundario">${base75.toFixed(2)}€</span> | <strong>25%:</strong> <span class="importe-destacado">${base25.toFixed(2)}€</span></small>
+                    </div>
                 </div>
-                <div class="aviso-actions">
-                    <button class="edit-btn-small" onclick="app.editAviso(${aviso.id})">Editar</button>
-                    <button class="delete-btn-small" onclick="app.deleteAviso(${aviso.id})">Eliminar</button>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <div class="cerrado-toggle ${av.cerrado ? 'cerrado' : 'abierto'}" data-id="${av.id}" title="${av.cerrado ? 'Aviso cerrado' : 'Aviso abierto'}">
+                        ${av.cerrado ? 'CERRADO' : 'ABIERTO'}
+                    </div>
+                    <div class="aviso-actions">
+                        <button class="edit-btn-small" data-id="${av.id}">Editar</button>
+                        <button class="delete-btn-small" data-id="${av.id}">Eliminar</button>
+                    </div>
                 </div>
             `;
-            avisosListDiv.appendChild(avisoDiv);
+            container.appendChild(div);
+        });
+
+        // event handlers for edit/delete
+        container.querySelectorAll('.edit-btn-small').forEach(b => {
+            b.onclick = () => this.editAviso(b.dataset.id);
+        });
+        container.querySelectorAll('.delete-btn-small').forEach(b => {
+            b.onclick = () => this.deleteAviso(b.dataset.id);
+        });
+
+        // handlers for cerrar toggle
+        container.querySelectorAll('.cerrado-toggle').forEach(el => {
+            el.onclick = () => this.toggleCerrado(el.dataset.id);
         });
 
         this.updateFacturaPreview();
     },
 
-    populateFilterOptions: function() {
-        const filtroAseguradoraSelect = document.getElementById('filtroAseguradora');
-        const filtroAnoSelect = document.getElementById('filtroAno');
-
-        // Aseguradoras
-        filtroAseguradoraSelect.innerHTML = '<option value="">Todas</option>';
-        this.opciones.aseguradora.forEach(aseg => {
-            const option = document.createElement('option');
-            option.value = aseg;
-            option.textContent = aseg;
-            filtroAseguradoraSelect.appendChild(option);
-        });
-
-        // Años
-        const anos = [...new Set(this.avisos.map(aviso => new Date(aviso.fechaAviso + 'T00:00:00').getFullYear()))];
-        filtroAnoSelect.innerHTML = '<option value="">Todos</option>';
-        anos.sort((a, b) => b - a).forEach(ano => {
-            const option = document.createElement('option');
-            option.value = ano;
-            option.textContent = ano;
-            filtroAnoSelect.appendChild(option);
-        });
+    bulkSelect(mode) {
+        // Only select/deselect closed avisos
+        if (mode === 'all') {
+            this.avisos.forEach(av => { if (av.cerrado) av.seleccionado = true; });
+            this.showToast('success','Avisos cerrados seleccionados', 4000);
+        } else if (mode === 'none') {
+            this.avisos.forEach(av => av.seleccionado = false);
+            this.showToast('info','Selección eliminada', 3000);
+        }
+        this.saveData();
+        this.displayAvisos();
     },
 
-    updateFacturaPreview: function() {
-        const facturaPreviewDiv = document.getElementById('factura-preview');
-        const avisosSeleccionados = this.avisos.filter(aviso => aviso.seleccionado);
-        const generarPdfBtn = document.getElementById('generar-factura-pdf');
+    openSelectionModal(mode) {
+        this.selectionMode = mode;
+        const modal = document.getElementById('select-modal');
+        const title = document.getElementById('select-modal-title');
+        const body = document.getElementById('select-modal-body');
+        title.textContent = mode === 'month' ? 'Seleccionar meses' : mode === 'week' ? 'Seleccionar semanas' : 'Seleccionar años';
+        body.innerHTML = '';
 
-        if (avisosSeleccionados.length === 0) {
-            facturaPreviewDiv.innerHTML = '<p class="no-seleccion">No hay avisos seleccionados para facturar.</p>';
-            generarPdfBtn.disabled = true;
-            return;
+        if (mode === 'month') {
+            const years = [...new Set(this.avisos.map(a => a.fechaAviso ? new Date(a.fechaAviso + 'T00:00:00').getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+            const ySel = document.createElement('select'); ySel.id = 'sel-month-year';
+            if (years.length) {
+                years.forEach(y=> { const o = document.createElement('option'); o.value = y; o.textContent = y; ySel.appendChild(o); });
+            } else {
+                ySel.innerHTML = '<option value="">(sin años)</option>';
+            }
+            const monthsHtml = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+                .map((m,i)=>`<label style="display:inline-block; margin:6px;"><input type="checkbox" data-month="${i+1}"> ${m}</label>`).join('');
+            body.innerHTML = `<div style="text-align:center; margin-bottom:8px;"><strong>Año:</strong> </div><div style="text-align:center; margin-bottom:10px;">${ySel.outerHTML}</div><div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">${monthsHtml}</div>`;
+        } else if (mode === 'year') {
+            const years = [...new Set(this.avisos.map(a => a.fechaAviso ? new Date(a.fechaAviso + 'T00:00:00').getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+            if (!years.length) body.innerHTML = '<p style="text-align:center;">No hay años disponibles en los avisos.</p>';
+            else {
+                body.innerHTML = years.map(y=>`<label style="display:block; text-align:center; margin:6px;"><input type="checkbox" data-year="${y}"> ${y}</label>`).join('');
+            }
+        } else if (mode === 'week') {
+            const weeksMap = {};
+            this.avisos.forEach(av => {
+                if (!av.fechaAviso) return;
+                const dt = new Date(av.fechaAviso + 'T00:00:00');
+                const iso = getISOWeekInfo(dt);
+                const key = `${iso.year}-W${String(iso.week).padStart(2,'0')}`;
+                if (!weeksMap[key]) weeksMap[key] = { start: iso.start, end: iso.end, count: 0 };
+                weeksMap[key].count++;
+            });
+            const entries = Object.keys(weeksMap).sort().reverse();
+            if (!entries.length) body.innerHTML = '<p style="text-align:center;">No hay semanas disponibles en los avisos.</p>';
+            else {
+                body.innerHTML = entries.map(k=>{
+                    const w = weeksMap[k];
+                    const label = `${k} (${formatDate(w.start)} → ${formatDate(w.end)}) - ${w.count} aviso(s)`;
+                    return `<label style="display:block; margin:6px;"><input type="checkbox" data-week="${k}"> ${label}</label>`;
+                }).join('');
+            }
         }
 
-        let baseImponibleTotal = 0;
-        avisosSeleccionados.forEach(aviso => {
-            baseImponibleTotal += aviso.manoObra + aviso.importeDesplazamiento + aviso.importeRecambios;
-        });
-
-        const ivaPorcentaje = 0.21;
-        const retencionPorcentaje = 0.15;
-
-        const ivaTotal = baseImponibleTotal * ivaPorcentaje;
-        const retencionTotal = baseImponibleTotal * retencionPorcentaje;
-        const totalFactura = baseImponibleTotal + ivaTotal - retencionTotal;
-
-        // Distribución entre socios
-        const tuParteBase = baseImponibleTotal * 0.75;
-        const carlosParteBase = baseImponibleTotal * 0.25;
-        const tuParteConIva = tuParteBase + (tuParteBase * ivaPorcentaje);
-
-        facturaPreviewDiv.innerHTML = `
-            <h4>Resumen de Factura (<span class="importe-destacado">${avisosSeleccionados.length}</span> aviso(s) seleccionado(s))</h4>
-            <p><strong>Base Imponible Total:</strong> <span class="importe-principal">${baseImponibleTotal.toFixed(2)}€</span></p>
-            <p><strong>IVA (21%):</strong> <span class="importe-secundario">${ivaTotal.toFixed(2)}€</span></p>
-            <p><strong>Retención (15%):</strong> <span class="importe-destacado">-${retencionTotal.toFixed(2)}€</span></p>
-            <p><strong>Total Factura:</strong> <span class="importe-destacado">${totalFactura.toFixed(2)}€</span></p>
-            <hr>
-            <h4>Distribución de Beneficios:</h4>
-            <p><strong>Tu Parte (75% Base + IVA sobre tu parte):</strong> <span class="importe-principal">${tuParteConIva.toFixed(2)}€</span></p>
-            <p><strong>Parte de Carlos (25% Base):</strong> <span class="importe-secundario">${carlosParteBase.toFixed(2)}€</span></p>
-            <hr>
-            <h5>Detalle de Avisos:</h5>
-            <ul>
-                ${avisosSeleccionados.map(aviso => `
-                    <li>
-                        <strong>Nº Aviso:</strong> ${aviso.numeroAviso} - 
-                        <strong>Fecha:</strong> ${aviso.fechaAviso} - 
-                        <strong>Aseguradora:</strong> ${aviso.aseguradora} - 
-                        <strong>Importe Base:</strong> <span class="importe-principal">${(aviso.manoObra + aviso.importeDesplazamiento + aviso.importeRecambios).toFixed(2)}€</span>
-                    </li>
-                `).join('')}
-            </ul>
-        `;
-        generarPdfBtn.disabled = false;
+        modal.style.display = 'block';
     },
+    closeSelectionModal() {
+        document.getElementById('select-modal').style.display = 'none';
+    },
+    applySelectionFromModal() {
+        const mode = this.selectionMode;
+        if (!mode) return;
+        const body = document.getElementById('select-modal-body');
+        const checkboxes = body.querySelectorAll('input[type="checkbox"]');
+        const selected = Array.from(checkboxes).filter(cb => cb.checked);
 
-    generarFacturaPDF: function() {
-        const self = this;
-        const avisosSeleccionados = this.avisos.filter(aviso => aviso.seleccionado);
-        if (avisosSeleccionados.length === 0) {
-            this.showToast('No hay avisos seleccionados');
-            return;
-        }
+        if (!selected.length) { this.showToast('info','No se seleccionó nada', 4000); return; }
 
-        // Incrementar número de factura
-        this.ultimoNumeroFactura++;
-        const numeroFactura = `FAC-${this.ultimoNumeroFactura.toString().padStart(4, '0')}`;
-        this.saveData(); // Guardar el nuevo número
-
-        // Solicitar número de factura editable
-        const numeroFacturaFinal = prompt('Introduce el número de factura (editable):', numeroFactura);
-        if (numeroFacturaFinal === null) {
-            // Usuario canceló
-            this.ultimoNumeroFactura--; // Revertir incremento
-            this.saveData();
-            return;
-        }
-
-        // Preparar datos
-        let baseImponibleTotal = 0;
-        const filas = avisosSeleccionados.map(aviso => {
-            const subtotal = aviso.manoObra + aviso.importeDesplazamiento + aviso.importeRecambios;
-            baseImponibleTotal += subtotal;
-            return {
-                numero: aviso.numeroAviso,
-                fecha: aviso.fechaAviso,
-                aseguradora: aviso.aseguradora,
-                concepto: `M.O: ${aviso.manoObra.toFixed(2)}€, Desp: ${aviso.importeDesplazamiento.toFixed(2)}€, Rec: ${aviso.importeRecambios.toFixed(2)}€`,
-                subtotal: subtotal.toFixed(2)
-            };
-        });
-
-        const ivaPorcentaje = 0.21;
-        const retencionPorcentaje = 0.15;
-        const ivaTotal = baseImponibleTotal * ivaPorcentaje;
-        const retencionTotal = baseImponibleTotal * retencionPorcentaje;
-        const totalFactura = baseImponibleTotal + ivaTotal - retencionTotal;
-        const tuParteBase = baseImponibleTotal * 0.75;
-        const carlosParteBase = baseImponibleTotal * 0.25;
-        const tuParteConIva = tuParteBase + (tuParteBase * ivaPorcentaje);
-
-        const emisor = this.datosFacturacion.emisor;
-        const receptor = this.datosFacturacion.receptor;
-        const fechaActual = new Date().toISOString().split('T')[0];
-
-        // HTML fallback (impresión) por si falla la carga de jsPDF
-        const htmlContent = `
-            <!doctype html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <title>Factura_${numeroFacturaFinal}_${fechaActual}</title>
-                <style>
-                    body { font-family: Arial, sans-serif; color: #222; padding: 20px; }
-                    h1 { text-align: center; }
-                    .cols { display:flex; gap:20px; margin-top:20px; }
-                    .col { flex:1; }
-                    table { width:100%; border-collapse:collapse; margin-top:20px; }
-                    th, td { border:1px solid #ccc; padding:6px; text-align:left; }
-                    .summary { margin-top:20px; float:right; width:40%; }
-                </style>
-            </head>
-            <body>
-                <h1>FACTURA - facturaNando</h1>
-                <p><strong>Número de factura:</strong> ${numeroFacturaFinal} | <strong>Fecha:</strong> ${fechaActual}</p>
-                <div class="cols">
-                    <div class="col">
-                        <h3>EMISOR</h3>
-                        <div>${emisor.nombre}</div>
-                        <div>${emisor.direccion}</div>
-                        <div>${emisor.localidad}</div>
-                        <div>DNI: ${emisor.dni}</div>
-                        <div>TEL: ${emisor.telf}</div>
-                        <div>Email: ${emisor.email}</div>
-                        <div>Cuenta: ${emisor.cuenta}</div>
-                        <div>Banco: ${emisor.banco}</div>
-                    </div>
-                    <div class="col">
-                        <h3>RECEPTOR</h3>
-                        <div>${receptor.nombre}</div>
-                        <div>${receptor.direccion}</div>
-                        <div>${receptor.localidad}</div>
-                        <div>CIF: ${receptor.cif}</div>
-                        <div>Email: ${receptor.email}</div>
-                        <div>TEL: ${receptor.telf}</div>
-                    </div>
-                </div>
-
-                <h3>Detalle de servicios</h3>
-                <table>
-                    <thead>
-                        <tr><th>Nº Aviso</th><th>Fecha</th><th>Aseguradora</th><th>Concepto</th><th>Importe Base (€)</th></tr>
-                    </thead>
-                    <tbody>
-                        ${filas.map(f => `<tr><td>${f.numero}</td><td>${f.fecha}</td><td>${f.aseguradora}</td><td>${f.concepto}</td><td style="text-align:right">${f.subtotal}€</td></tr>`).join('')}
-                    </tbody>
-                </table>
-
-                <div class="summary">
-                    <table>
-                        <tr><td><strong>Base Imponible:</strong></td><td style="text-align:right">${baseImponibleTotal.toFixed(2)}€</td></tr>
-                        <tr><td><strong>IVA (21%):</strong></td><td style="text-align:right">${ivaTotal.toFixed(2)}€</td></tr>
-                        <tr><td><strong>Retención (15%):</strong></td><td style="text-align:right">-${retencionTotal.toFixed(2)}€</td></tr>
-                        <tr><td><strong>TOTAL FACTURA:</strong></td><td style="text-align:right"><strong>${totalFactura.toFixed(2)}€</strong></td></tr>
-                    </table>
-                </div>
-            </body>
-            </html>
-        `;
-
-        // Helper para cargar script con timeout
-        function loadScriptWithTimeout(src, timeout = 8000) {
-            return new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = src;
-                s.async = true;
-                let timedOut = false;
-                const to = setTimeout(() => {
-                    timedOut = true;
-                    s.onerror = s.onload = null;
-                    reject(new Error('timeout'));
-                }, timeout);
-                s.onload = () => {
-                    if (timedOut) return;
-                    clearTimeout(to);
-                    resolve();
-                };
-                s.onerror = () => {
-                    if (timedOut) return;
-                    clearTimeout(to);
-                    reject(new Error('error loading ' + src));
-                };
-                document.head.appendChild(s);
+        if (mode === 'month') {
+            const yearSel = document.getElementById('sel-month-year');
+            const year = yearSel ? yearSel.value : null;
+            const months = selected.map(cb => parseInt(cb.dataset.month,10));
+            this.avisos.forEach(av => {
+                if (!av.fechaAviso) return;
+                const dt = new Date(av.fechaAviso + 'T00:00:00');
+                const y = dt.getFullYear();
+                const m = dt.getMonth() + 1;
+                if ((!year || String(y) === String(year)) && months.includes(m)) {
+                    if (av.cerrado) av.seleccionado = true;
+                }
+            });
+        } else if (mode === 'year') {
+            const years = selected.map(cb => parseInt(cb.dataset.year,10));
+            this.avisos.forEach(av => {
+                if (!av.fechaAviso) return;
+                const y = new Date(av.fechaAviso + 'T00:00:00').getFullYear();
+                if (years.includes(y) && av.cerrado) av.seleccionado = true;
+            });
+        } else if (mode === 'week') {
+            const weeks = selected.map(cb => cb.dataset.week);
+            this.avisos.forEach(av => {
+                if (!av.fechaAviso) return;
+                const dt = new Date(av.fechaAviso + 'T00:00:00');
+                const iso = getISOWeekInfo(dt);
+                const key = `${iso.year}-W${String(iso.week).padStart(2,'0')}`;
+                if (weeks.includes(key) && av.cerrado) av.seleccionado = true;
             });
         }
 
-        // Intentar cargar jsPDF desde varios CDNs secuencialmente
-        const cdns = [
-            'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-            'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-        ];
-
-        (async () => {
-            let loaded = false;
-            for (let i = 0; i < cdns.length && !loaded; i++) {
-                try {
-                    await loadScriptWithTimeout(cdns[i], 7000);
-                    // Verificar presencia
-                    if (window.jspdf && (window.jspdf.jsPDF || window.jspdf)) {
-                        loaded = true;
-                        break;
-                    }
-                } catch (err) {
-                    // siguiente CDN
-                }
-            }
-
-            if (!loaded) {
-                // Fallback: abrir nueva ventana imprimible (el usuario puede "Guardar como PDF" desde la impresión)
-                const w = window.open('', '_blank');
-                if (!w) {
-                    self.showToast('No se pudo abrir la ventana de impresión. Permite popups o usa otro navegador.');
-                    return;
-                }
-                w.document.open();
-                w.document.write(htmlContent);
-                w.document.close();
-                // Esperar un momento a que cargue y lanzar print
-                w.focus();
-                setTimeout(() => {
-                    try {
-                        w.print();
-                    } catch (e) {
-                        // Si falla print, dejar contenido y mensaje
-                    }
-                }, 800);
-                self.showToast('No se pudo generar PDF automáticamente. Se ha abierto una vista imprimible; utiliza "Guardar como PDF" en la impresión.');
-                return;
-            }
-
-            // Si llegamos aquí, jsPDF está disponible
-            try {
-                const jsPDF = (window.jspdf && (window.jspdf.jsPDF || window.jspdf)) ? (window.jspdf.jsPDF || window.jspdf) : null;
-                if (!jsPDF) throw new Error('jsPDF no encontrado');
-
-                const doc = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'a4'
-                });
-
-                // Layout básico y seguro usando la API de texto (sin dependencias externas)
-                const leftMargin = 14;
-                const rightLimit = 196; // 210 - 14
-                let y = 15;
-
-                doc.setFontSize(18);
-                doc.text('FACTURA', 105, y, { align: 'center' });
-                y += 8;
-                doc.setFontSize(10);
-                doc.text(`Número de factura: ${numeroFacturaFinal} | Fecha: ${fechaActual}`, leftMargin, y);
-                y += 8;
-
-                // Emisor y Receptor en columnas
-                const colGap = 8;
-                const colWidth = (rightLimit - leftMargin - colGap) / 2;
-                const xLeft = leftMargin;
-                const xRight = leftMargin + colWidth + colGap;
-
-                doc.setFontSize(11);
-                doc.setFont(undefined, 'bold');
-                doc.text('EMISOR:', xLeft, y);
-                doc.text('RECEPTOR:', xRight, y);
-                doc.setFont(undefined, 'normal');
-                y += 6;
-
-                const emLines = [
-                    emisor.nombre, emisor.direccion, emisor.localidad,
-                    `DNI: ${emisor.dni}`, `TEL: ${emisor.telf}`, `Email: ${emisor.email}`, `Cuenta: ${emisor.cuenta}`, `Banco: ${emisor.banco}`
-                ];
-                const reLines = [
-                    receptor.nombre, receptor.direccion, receptor.localidad,
-                    `CIF: ${receptor.cif}`, `Email: ${receptor.email}`, `TEL: ${receptor.telf}`
-                ];
-
-                const lineHeight = 6;
-                for (let i = 0; i < Math.max(emLines.length, reLines.length); i++) {
-                    if (emLines[i]) {
-                        const emSplit = doc.splitTextToSize(emLines[i], colWidth);
-                        doc.text(emSplit, xLeft, y);
-                    }
-                    if (reLines[i]) {
-                        const reSplit = doc.splitTextToSize(reLines[i], colWidth);
-                        doc.text(reSplit, xRight, y);
-                    }
-                    y += lineHeight;
-                }
-
-                y += 4;
-
-                // Encabezado tabla
-                doc.setFont(undefined, 'bold');
-                const headers = ['Nº Aviso', 'Fecha', 'Aseguradora', 'Concepto', 'Imp. Base'];
-                const colWidths = [24, 26, 46, 70, 22]; // suma aprox 188mm (ajustado a márgenes)
-                const colX = [leftMargin];
-                for (let i = 1; i < colWidths.length; i++) {
-                    colX[i] = colX[i - 1] + colWidths[i - 1];
-                }
-
-                // Dibujar headers
-                doc.setFontSize(10);
-                for (let i = 0; i < headers.length; i++) {
-                    doc.text(headers[i], colX[i] + 1, y);
-                }
-                y += 6;
-                doc.setFont(undefined, 'normal');
-
-                // Filas
-                for (let r = 0; r < filas.length; r++) {
-                    const row = filas[r];
-                    // Si nos acercamos al final de la página, crear nueva
-                    if (y > 270) {
-                        doc.addPage();
-                        y = 20;
-                    }
-                    // Nº Aviso
-                    doc.text(String(row.numero), colX[0] + 1, y);
-                    doc.text(String(row.fecha), colX[1] + 1, y);
-                    // Aseguradora (dividir si largo)
-                    const asegLines = doc.splitTextToSize(row.aseguradora || '-', colWidths[2] - 2);
-                    doc.text(asegLines, colX[2] + 1, y);
-                    // Concepto (puede ocupar varias líneas)
-                    const conceptoLines = doc.splitTextToSize(row.concepto, colWidths[3] - 2);
-                    doc.text(conceptoLines, colX[3] + 1, y);
-                    // Importe alineado derecha en su columna
-                    const importeText = `${row.subtotal}€`;
-                    const importeX = colX[4] + colWidths[4] - 2;
-                    doc.text(importeText, importeX, y, { align: 'right' });
-
-                    // Avanzar y tomar en cuenta el mayor número de líneas (aseg + concepto)
-                    const maxLines = Math.max(1, asegLines.length, conceptoLines.length);
-                    y += maxLines * lineHeight;
-                }
-
-                // Resumen (al final derecha)
-                if (y > 220) {
-                    doc.addPage();
-                    y = 20;
-                }
-                y += 6;
-                const resumenX = rightLimit - 80;
-                doc.setFont(undefined, 'bold');
-                doc.text('Resumen:', resumenX, y);
-                doc.setFont(undefined, 'normal');
-                y += 6;
-                doc.text(`Base Imponible: ${baseImponibleTotal.toFixed(2)}€`, resumenX, y);
-                y += 6;
-                doc.text(`IVA (21%): ${ivaTotal.toFixed(2)}€`, resumenX, y);
-                y += 6;
-                doc.text(`Retención (15%): -${retencionTotal.toFixed(2)}€`, resumenX, y);
-                y += 6;
-                doc.setFont(undefined, 'bold');
-                doc.text(`TOTAL FACTURA: ${totalFactura.toFixed(2)}€`, resumenX, y);
-
-                // Guardar PDF
-                doc.save(`factura_${numeroFacturaFinal}_${fechaActual}.pdf`);
-                // (intencionadamente no mostramos toast de éxito para evitar mensajes que pediste eliminar)
-            } catch (err) {
-                console.error('Error generando PDF con jsPDF:', err);
-                self.showToast('Error al generar PDF automáticamente. Se abrirá una vista imprimible como alternativa.');
-                // abrir fallback imprimible
-                const w = window.open('', '_blank');
-                if (w) {
-                    w.document.open();
-                    w.document.write(htmlContent);
-                    w.document.close();
-                    setTimeout(() => { try { w.print(); } catch(e) {} }, 700);
-                }
-            }
-        })();
+        this.saveData();
+        this.displayAvisos();
+        this.updateFacturaPreview();
+        this.closeSelectionModal();
+        this.showToast('success','Selección aplicada (solo cerrados)', 4000);
     },
 
-    showToast: function(message) {
-        const toastContainer = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.classList.add('toast');
-        toast.textContent = message;
-        toastContainer.appendChild(toast);
+    updateFacturaPreview() {
+        const preview = document.getElementById('factura-preview');
+        const generarBtn = document.getElementById('generar-factura-pdf');
+        const seleccionados = this.avisos.filter(a => a.seleccionado);
+        if (!seleccionados.length) { preview.innerHTML = '<p class="no-seleccion">No hay avisos seleccionados para facturar.</p>'; generarBtn.disabled = true; return; }
 
-        setTimeout(() => {
-            toast.classList.add('show');
-        }, 100);
+        // calculos con 75/25
+        let baseTotal = 0;      // suma de subtotales (100%)
+        let base75Total = 0;    // suma de 75%
+        let base25Total = 0;    // suma de 25%
 
+        seleccionados.forEach(av => {
+            const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
+            baseTotal += subtotal;
+            base75Total += subtotal * 0.75;
+            base25Total += subtotal * 0.25;
+        });
+
+        baseTotal = parseFloat(baseTotal.toFixed(2));
+        base75Total = parseFloat(base75Total.toFixed(2));
+        base25Total = parseFloat(base25Total.toFixed(2));
+
+        const retencion = parseFloat((base75Total * 0.15).toFixed(2)); // 15% sobre 75%
+        const iva = parseFloat((base75Total * 0.21).toFixed(2)); // 21% sobre 75%
+        // total de factura: base75 + iva - retencion + base25 -> corresponde al total facturado al cliente
+        const totalFactura = parseFloat((base75Total + iva - retencion + base25Total).toFixed(2));
+
+        preview.innerHTML = `
+            <p>Avisos seleccionados: <strong>${seleccionados.length}</strong></p>
+            <p>Base Imponible: <span class="importe-principal">${base75Total.toFixed(2)}€</span></p>
+            <p>Base total (100%): <span class="importe-secundario">${baseTotal.toFixed(2)}€</span></p>
+            <p>Retención (15%): <span class="importe-destacado">-${retencion.toFixed(2)}€</span></p>
+            <p>IVA (21%): <span class="importe-secundario">${iva.toFixed(2)}€</span></p>
+            <p><strong>Total:</strong> <span class="importe-destacado">${totalFactura.toFixed(2)}€</span></p>
+            <hr>
+            <h5>Detalle de avisos</h5>
+            <ul>
+                ${seleccionados.map(av=>{
+                    const subtotal = ((av.manoObra||0)+(av.importeDesplazamiento||0)+(av.importeRecambios||0)).toFixed(2);
+                    const b75 = (parseFloat(subtotal) * 0.75).toFixed(2);
+                    return `<li>Nº ${av.numeroAviso} — ${av.fechaAviso || ''} — Subtotal ${subtotal}€ — 75%: ${b75}€</li>`;
+                }).join('')}
+            </ul>
+        `;
+        generarBtn.disabled = false;
+    },
+
+    generarFacturaPDF() {
+        const seleccionados = this.avisos.filter(a => a.seleccionado);
+        if (!seleccionados.length) { this.showToast('info','No hay avisos seleccionados', 4000); return; }
+
+        // double-check: todos seleccionados deben estar cerrados
+        const abiertos = seleccionados.filter(s => !s.cerrado);
+        if (abiertos.length) {
+            this.showToast('danger','Hay avisos seleccionados que no están cerrados. No se puede facturar.', 4000);
+            return;
+        }
+
+        if (!window.jspdf) {
+            alert("La librería PDF no está cargada. Recarga la página.");
+            return;
+        }
+
+        this.ultimoNumeroFactura++;
+        let defaultNum = `FAC-${String(this.ultimoNumeroFactura).padStart(4,'0')}`;
+        let num = prompt('Introduce número de factura:', defaultNum);
+        if (num === null) { this.ultimoNumeroFactura--; return; }
+
+        // cálculos (75/25)
+        let baseTotal = 0, base75Total = 0, base25Total = 0;
+        const seleccionadosOrdenados = [...seleccionados].sort((a,b) => new Date(a.fechaAviso) - new Date(b.fechaAviso));
+        seleccionadosOrdenados.forEach(av => {
+            const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
+            baseTotal += subtotal;
+            base75Total += subtotal * 0.75;
+            base25Total += subtotal * 0.25;
+        });
+        baseTotal = parseFloat(baseTotal.toFixed(2));
+        base75Total = parseFloat(base75Total.toFixed(2));
+        base25Total = parseFloat(base25Total.toFixed(2));
+        const retencion = parseFloat((base75Total * 0.15).toFixed(2));
+        const iva = parseFloat((base75Total * 0.21).toFixed(2));
+        const totalFactura = parseFloat((base75Total + iva - retencion + base25Total).toFixed(2));
+
+        const em = this.datosFacturacion.emisor;
+        const rec = this.datosFacturacion.receptor;
+        const fechaActual = formatDate(new Date());
+
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+            const pageW = doc.internal.pageSize.width;
+            const left = 40, right = pageW - 40;
+
+            // Cabecera
+            doc.setFontSize(18); doc.setFont(undefined, 'bold');
+            doc.text('FACTURA', pageW / 2, 40, { align:'center' });
+
+            doc.setFontSize(10); doc.setFont(undefined, 'normal');
+            doc.text(`Nº Factura: ${num}`, left, 80);
+            doc.text(`Fecha: ${fechaActual}`, left, 98);
+
+            // Emisor y Receptor (PDF)
+            doc.setFont(undefined, 'bold');
+            doc.text('EMISOR', left, 124); doc.text('RECEPTOR', left + 300, 124);
+            doc.setFont(undefined, 'normal'); doc.setFontSize(10);
+            doc.text([em.nombre, em.direccion, em.localidad, `DNI: ${em.dni}`, `Telf: ${em.telf}`], left, 142);
+            doc.text([rec.nombre, rec.direccion, rec.localidad, `CIF: ${rec.cif}`, `Telf: ${rec.telf}`], left + 300, 142);
+
+            // Tabla con anchos cuidados
+            let y = 240; // espacio extra antes de primera línea (solicitado)
+
+            doc.setFont(undefined, 'bold');
+            doc.setFillColor(245,245,245);
+            doc.rect(left, y - 18, right - left, 18, 'F');
+            doc.text('Aviso', left + 8, y);
+            doc.text('Fecha', left + 110, y);
+            doc.text('Aseguradora', left + 170, y);
+            doc.text('Detalle Conceptos', left + 300, y);
+            doc.text('Base', right - 8, y, { align: 'right' }); // etiqueta simplificada: "Base"
+            y += 10;
+            doc.setFont(undefined, 'normal');
+
+            seleccionadosOrdenados.forEach(av => {
+                if (y > doc.internal.pageSize.height - 120) { doc.addPage(); y = 80; }
+                const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
+                const b75 = parseFloat((subtotal * 0.75).toFixed(2));
+
+                const numAvisoTxt = doc.splitTextToSize(av.numeroAviso || '', 80);
+                const asegTxt = doc.splitTextToSize(av.aseguradora || '', 120);
+                const conceptoTxt = doc.splitTextToSize(`M.O: ${av.manoObra.toFixed(2)}€ | Desp: ${av.importeDesplazamiento.toFixed(2)}€ | Rec: ${av.importeRecambios.toFixed(2)}€`, 200);
+
+                doc.text(numAvisoTxt, left + 8, y);
+                doc.text(av.fechaAviso || '', left + 110, y);
+                doc.text(asegTxt, left + 170, y);
+                doc.text(conceptoTxt, left + 300, y);
+                doc.text(`${b75.toFixed(2)}€`, right - 8, y, { align: 'right' });
+
+                const lines = Math.max(numAvisoTxt.length, asegTxt.length, conceptoTxt.length);
+                y += (lines * 12) + 8;
+            });
+
+            // Totales (ordenado según petición)
+            if (y > doc.internal.pageSize.height - 140) { doc.addPage(); y = 80; }
+            y += 6;
+            doc.setFont(undefined, 'bold'); doc.setFontSize(11);
+            const xFact = right - 260;
+
+            doc.text(`Base imponible:`, xFact, y); doc.text(`${base75Total.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
+            doc.text(`Retención (15%):`, xFact, y); doc.text(`-${retencion.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
+            doc.text(`IVA (21%):`, xFact, y); doc.text(`${iva.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 20;
+
+            doc.setFontSize(13);
+            doc.text(`TOTAL:`, xFact, y); doc.text(`${totalFactura.toFixed(2)}€`, right - 8, y, { align:'right' });
+
+            // NO incluimos el desglose de reparto (solicitado eliminar)
+
+            doc.save(`Factura_Nando_${num}.pdf`);
+            this.saveData();
+            this.showToast('success','PDF descargado correctamente', 4000);
+        } catch (err) {
+            console.error(err);
+            alert("Error crítico al generar el PDF.");
+        }
+    },
+
+    showToast(type = 'info', message = '', duration = 4000) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const t = document.createElement('div');
+        t.className = `toast ${type}`;
+        t.textContent = message;
+        container.appendChild(t);
+        // for CSS animation
+        requestAnimationFrame(() => t.classList.add('show'));
+        // remove after duration: fade out then remove
         setTimeout(() => {
-            toast.classList.remove('show');
-            toast.addEventListener('transitionend', () => toast.remove());
-        }, 3000);
+            t.classList.remove('show');
+            // wait for transition then remove
+            setTimeout(() => { if (t && t.parentNode) t.parentNode.removeChild(t); }, 300);
+        }, duration);
     }
 };
 
-// Inicializar la aplicación cuando el DOM esté cargado
-document.addEventListener('DOMContentLoaded', () => {
-    app.init();
-});
+function formatDate(d) {
+    const dt = new Date(d);
+    return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
+}
+
+/* util: ISO week info (start date, end date, week number, year) */
+function getISOWeekInfo(date){
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    // compute start/end
+    const start = new Date(d);
+    start.setUTCDate(start.getUTCDate() - (start.getUTCDay() || 7) + 1);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+    return { year: d.getUTCFullYear(), week: weekNo, start: start, end: end };
+}
+
+document.addEventListener('DOMContentLoaded', () => app.init());

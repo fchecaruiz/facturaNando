@@ -1,170 +1,183 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>facturaNando</title>
-    <link rel="stylesheet" href="facturaNando.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>facturaNando</title>
+  <link rel="stylesheet" href="facturaNando.css">
 </head>
 <body class="vibrant-mode">
-    <div class="container">
-        <h1>facturaNando - Gestión de Avisos y Facturación</h1>
+  <div class="container">
+    <h1>facturaNando</h1>
+    <h3>Gestión de avisos y facturación</h3>
 
-        <section id="aviso-form-section">
-            <div class="card">
-                <h3>Añadir Nuevo Aviso</h3>
-                <form id="aviso-form">
-                    <label for="numeroAviso">Número de Aviso:</label>
-                    <input type="text" id="numeroAviso" required>
-
-                    <label for="fechaAviso">Fecha del Aviso:</label>
-                    <input type="date" id="fechaAviso" required>
-
-                    <label for="aseguradora">Aseguradora:</label>
-                    <div class="select-container">
-                        <select id="aseguradora">
-                            <option value="">Selecciona Aseguradora</option>
-                        </select>
-                        <button type="button" class="manage-btn" onclick="app.openManageModal('aseguradora')">Gestionar</button>
-                    </div>
-                    
-                    <label for="marca">Marca:</label>
-                    <div class="select-container">
-                        <select id="marca">
-                            <option value="">Selecciona Marca</option>
-                        </select>
-                        <button type="button" class="manage-btn" onclick="app.openManageModal('marca')">Gestionar</button>
-                    </div>
-
-                    <label for="tipoAparato">Tipo de Aparato:</label>
-                    <div class="select-container">
-                        <select id="tipoAparato">
-                            <option value="">Selecciona Tipo de Aparato</option>
-                        </select>
-                        <button type="button" class="manage-btn" onclick="app.openManageModal('tipoAparato')">Gestionar</button>
-                    </div>
-
-                    <h4>Detalles de Facturación:</h4>
-                    <label for="manoObra">Mano de Obra (€):</label>
-                    <input type="number" id="manoObra" step="0.01" value="0">
-
-                    <label for="desplazamientoKm">Desplazamiento (km):</label>
-                    <input type="number" id="desplazamientoKm" step="0.1" value="0">
-
-                    <label for="codigoRecambio">Código de Recambio:</label>
-                    <input type="text" id="codigoRecambio">
-
-                    <label for="importeRecambios">Importe Recambios (€):</label>
-                    <input type="number" id="importeRecambios" step="0.01" value="0">
-
-                    <button type="submit" id="guardar-aviso-btn">Guardar Aviso</button>
-                </form>
+    <div class="card" id="aviso-form-section">
+      <form id="aviso-form">
+        <div class="grid-2">
+          <div>
+            <label for="numeroAviso">Nº Aviso</label>
+            <input id="numeroAviso" type="text" placeholder="Ej: 1000001" />
+            <label for="fechaAviso">Fecha</label>
+            <input id="fechaAviso" type="date" />
+            <label for="aseguradora">Aseguradora</label>
+            <div class="select-container">
+              <select id="aseguradora"></select>
+              <button type="button" id="manage-aseg-btn" class="manage-btn">Gestionar</button>
             </div>
-        </section>
-
-        <section id="avisos-list-section">
-            <div class="card">
-                <h3>Resumen de Avisos</h3>
-                <div class="filter-controls">
-                    <label for="filtroAseguradora">Filtrar por Aseguradora:</label>
-                    <select id="filtroAseguradora">
-                        <option value="">Todas</option>
-                    </select>
-                    
-                    <label for="filtroAno">Año:</label>
-                    <select id="filtroAno"></select>
-                    
-                    <label for="filtroMes">Mes:</label>
-                    <select id="filtroMes">
-                        <option value="">Todos</option>
-                        <option value="1">Enero</option>
-                        <option value="2">Febrero</option>
-                        <option value="3">Marzo</option>
-                        <option value="4">Abril</option>
-                        <option value="5">Mayo</option>
-                        <option value="6">Junio</option>
-                        <option value="7">Julio</option>
-                        <option value="8">Agosto</option>
-                        <option value="9">Septiembre</option>
-                        <option value="10">Octubre</option>
-                        <option value="11">Noviembre</option>
-                        <option value="12">Diciembre</option>
-                    </select>
-                    
-                    <button id="aplicar-filtro-btn" onclick="app.displayAvisos()">Aplicar Filtro</button>
-                </div>
-                <div id="avisos-list">
-                    <!-- Los avisos se cargarán aquí -->
-                </div>
+          </div>
+          <div>
+            <label for="marca">Marca</label>
+            <div class="select-container">
+              <select id="marca"></select>
+              <button type="button" id="manage-marca-btn" class="manage-btn">Gestionar</button>
             </div>
-        </section>
-        
-        <section id="facturacion-section">
-            <div class="card">
-                <h3>Facturación</h3>
-                <p>Selecciona los avisos a facturar desde el resumen de avisos.</p>
-                <div id="factura-preview">
-                    <!-- Detalles de la factura se cargarán aquí -->
-                </div>
-                <button id="generar-factura-pdf" disabled>Generar Factura en PDF</button>
-            </div>
-        </section>
 
-        <section id="datos-factura-section">
-            <div class="card">
-                <h3>Datos de Facturación (Emisor y Receptor)</h3>
-                <form id="datos-emisor-form">
-                    <h4>Datos del Emisor</h4>
-                    <label for="emisorNombre">Nombre:</label>
-                    <input type="text" id="emisorNombre" value="FERNANDO CHECA RUIZ">
-                    <label for="emisorDireccion">Dirección:</label>
-                    <input type="text" id="emisorDireccion" value="C/ REYES CATOLICOS Nº 1">
-                    <label for="emisorLocalidad">Localidad:</label>
-                    <input type="text" id="emisorLocalidad" value="42110 OLVEGA (SORIA)">
-                    <label for="emisorDni">DNI:</label>
-                    <input type="text" id="emisorDni" value="16.807.738-M">
-                    <label for="emisorTelf">Teléfono:</label>
-                    <input type="text" id="emisorTelf" value="68-29-64-59">
-                    <label for="emisorEmail">Email:</label>
-                    <input type="email" id="emisorEmail" value="fchecaruiz@gmail.com">
-                    <label for="emisorCuenta">Nº Cuenta:</label>
-                    <input type="text" id="emisorCuenta" value="ES71 2085 9611 10 0300041000">
-                    <label for="emisorBanco">Banco:</label>
-                    <input type="text" id="emisorBanco" value="IBERCAJA">
-                </form>
-
-                <form id="datos-receptor-form">
-                    <h4>Datos del Receptor</h4>
-                    <label for="receptorNombre">Nombre:</label>
-                    <input type="text" id="receptorNombre" value="REPARACIONES TECNICAS DUERO S.L.U.">
-                    <label for="receptorDireccion">Dirección:</label>
-                    <input type="text" id="receptorDireccion" value="C/ CASCANTE Nº 7 BAJO">
-                    <label for="receptorLocalidad">Localidad:</label>
-                    <input type="text" id="receptorLocalidad" value="42100 AGREDA (SORIA)">
-                    <label for="receptorCif">CIF:</label>
-                    <input type="text" id="receptorCif" value="B-01953504">
-                    <label for="receptorEmail">Email:</label>
-                    <input type="email" id="receptorEmail" value="electroduero@hotmail.com">
-                    <label for="receptorTelf">Teléfono:</label>
-                    <input type="text" id="receptorTelf" value="686-252-248">
-                </form>
-                <button id="guardar-datos-btn" onclick="app.guardarDatosFacturacion()">Guardar Datos de Facturación</button>
+            <label for="tipoAparato">Tipo de Aparato</label>
+            <div class="select-container">
+              <select id="tipoAparato"></select>
+              <button type="button" id="manage-tipo-btn" class="manage-btn">Gestionar</button>
             </div>
-        </section>
 
-        <!-- Modal para gestionar opciones -->
-        <div id="manage-modal" class="modal">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <h3 id="modal-title">Gestionar Opciones</h3>
-                <div id="modal-body">
-                    <!-- Contenido dinámico -->
-                </div>
-            </div>
+            <label for="codigoRecambio">Código Recambio (opcional)</label>
+            <input id="codigoRecambio" type="text" />
+
+          </div>
         </div>
 
-        <div id="toast-container"></div>
+        <div class="grid-2">
+          <div>
+            <label for="manoObra">Mano de Obra (€)</label>
+            <input id="manoObra" type="number" step="0.01" min="0" value="0" />
+          </div>
+          <div>
+            <label for="desplazamientoKm">Desplazamiento (km)</label>
+            <input id="desplazamientoKm" type="number" step="0.1" min="0" value="0" />
+            <small>Tarifa fija: 0.30€/km (no hace falta campo precio/km)</small>
+          </div>
+        </div>
+
+        <label for="importeRecambios">Importe Recambios (€)</label>
+        <input id="importeRecambios" type="number" step="0.01" min="0" value="0" />
+
+        <button id="guardar-aviso-btn" type="submit">Guardar Aviso</button>
+      </form>
     </div>
-    <script src="facturaNando.js"></script>
+
+    <div class="card">
+      <div class="search-row">
+        <input id="buscadorAvisos" type="text" placeholder="Buscar avisos..." />
+        <button id="limpiar-busqueda" class="manage-btn">Limpiar</button>
+      </div>
+
+      <div class="filter-controls">
+        <select id="filtroAseguradora"></select>
+        <select id="filtroAno"></select>
+        <select id="filtroMes">
+          <option value="">Mes</option>
+          <option value="1">Ene</option><option value="2">Feb</option><option value="3">Mar</option>
+          <option value="4">Abr</option><option value="5">May</option><option value="6">Jun</option>
+          <option value="7">Jul</option><option value="8">Ago</option><option value="9">Sep</option>
+          <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dic</option>
+        </select>
+        <button id="aplicar-filtro-btn">Aplicar Filtro</button>
+      </div>
+
+      <div class="bulk-actions">
+        <button id="sel-all">Seleccionar todo</button>
+        <button id="sel-none">Deseleccionar todo</button>
+        <button id="sel-month">Seleccionar por mes</button>
+        <button id="sel-year">Seleccionar por año</button>
+        <button id="sel-week">Seleccionar por semana</button>
+      </div>
+
+      <div id="avisos-list"></div>
+    </div>
+
+    <div class="card">
+      <h4>Preview factura</h4>
+      <div id="factura-preview"></div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px;">
+        <button id="generar-factura-pdf" class="btn-pdf">Generar Factura en PDF</button>
+        <button id="guardar-datos-btn">Guardar Datos de Facturación</button>
+      </div>
+    </div>
+
+    <div class="card billing-card">
+      <h4>Datos de facturación (editable)</h4>
+      <div class="grid-2">
+        <div class="billing-section">
+          <label for="emisorNombre">Emisor - Nombre</label>
+          <input id="emisorNombre" type="text" />
+          <label for="emisorDireccion">Dirección</label>
+          <input id="emisorDireccion" type="text" />
+          <label for="emisorLocalidad">Localidad</label>
+          <input id="emisorLocalidad" type="text" />
+          <label for="emisorDni">DNI</label>
+          <input id="emisorDni" type="text" />
+        </div>
+        <div class="billing-section">
+          <label for="emisorTelf">Teléfono</label>
+          <input id="emisorTelf" type="text" />
+          <label for="emisorEmail">Email</label>
+          <input id="emisorEmail" type="email" />
+          <label for="emisorCuenta">Cuenta</label>
+          <input id="emisorCuenta" type="text" />
+          <label for="emisorBanco">Banco</label>
+          <input id="emisorBanco" type="text" />
+        </div>
+      </div>
+
+      <h4>Receptor</h4>
+      <div class="grid-2">
+        <div class="billing-section">
+          <label for="receptorNombre">Nombre</label>
+          <input id="receptorNombre" type="text" />
+          <label for="receptorDireccion">Dirección</label>
+          <input id="receptorDireccion" type="text" />
+        </div>
+        <div class="billing-section">
+          <label for="receptorLocalidad">Localidad</label>
+          <input id="receptorLocalidad" type="text" />
+          <label for="receptorCif">CIF</label>
+          <input id="receptorCif" type="text" />
+          <label for="receptorEmail">Email</label>
+          <input id="receptorEmail" type="email" />
+          <label for="receptorTelf">Teléfono</label>
+          <input id="receptorTelf" type="text" />
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal para gestionar opciones -->
+  <div id="manage-modal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h3 id="modal-title">Gestionar</h3>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal para selección (mes/año/semana) -->
+  <div id="select-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-select">&times;</span>
+      <h3 id="select-modal-title">Seleccionar</h3>
+      <div id="select-modal-body"></div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button id="apply-selection-btn" class="manage-btn">Aplicar</button>
+        <button id="cancel-selection-btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <!-- Librería jsPDF (incluida aquí para evitar dependencias dinámicas) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Script principal -->
+  <script src="facturaNando.js"></script>
 </body>
 </html>
