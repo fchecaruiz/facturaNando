@@ -770,6 +770,30 @@ const app = {
         return Number.isNaN(fallback.getTime()) ? null : fallback;
     },
 
+    getLogoPngDataUrl() {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || 1200;
+                    canvas.height = img.naturalHeight || 320;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        resolve(null);
+                        return;
+                    }
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/png'));
+                } catch (e) {
+                    resolve(null);
+                }
+            };
+            img.onerror = () => resolve(null);
+            img.src = `facturaNando-logo.svg?v=${Date.now()}`;
+        });
+    },
+
     getSelectionStatusMode() {
         const selectedStatus = document.querySelector('input[name="selection-status"]:checked');
         return selectedStatus ? selectedStatus.value : 'both';
@@ -978,7 +1002,7 @@ const app = {
         generarBtn.disabled = false;
     },
 
-    generarFacturaPDF() {
+    async generarFacturaPDF() {
         const seleccionados = this.avisos.filter(a => a.seleccionado);
         if (!seleccionados.length) { this.showToast('info','No hay avisos seleccionados', 4000); return; }
 
@@ -1029,24 +1053,40 @@ const app = {
 
             const pageW = doc.internal.pageSize.width;
             const left = 40, right = pageW - 40;
+            const logoDataUrl = await this.getLogoPngDataUrl();
+            let hasLogo = false;
+            let headerOffsetY = 0;
+
+            if (logoDataUrl) {
+                try {
+                    const logoWidth = 220;
+                    const logoHeight = 58;
+                    const logoX = (pageW - logoWidth) / 2;
+                    doc.addImage(logoDataUrl, 'PNG', logoX, 20, logoWidth, logoHeight);
+                    hasLogo = true;
+                    headerOffsetY = 46;
+                } catch (e) {
+                    // Si falla el logo, la factura se genera igualmente.
+                }
+            }
 
             // Cabecera
             doc.setFontSize(18); doc.setFont(undefined, 'bold');
-            doc.text('FACTURA', pageW / 2, 40, { align:'center' });
+            doc.text('FACTURA', pageW / 2, hasLogo ? 92 : 46, { align:'center' });
 
             doc.setFontSize(10); doc.setFont(undefined, 'normal');
-            doc.text(`Nº Factura: ${num}`, left, 80);
-            doc.text(`Fecha: ${fechaActual}`, left, 98);
+            doc.text(`Nº Factura: ${num}`, left, 80 + headerOffsetY);
+            doc.text(`Fecha: ${fechaActual}`, left, 98 + headerOffsetY);
 
             // Emisor y Receptor (PDF)
             doc.setFont(undefined, 'bold');
-            doc.text('EMISOR', left, 124); doc.text('RECEPTOR', left + 300, 124);
+            doc.text('EMISOR', left, 124 + headerOffsetY); doc.text('RECEPTOR', left + 300, 124 + headerOffsetY);
             doc.setFont(undefined, 'normal'); doc.setFontSize(10);
-            doc.text([em.nombre, em.direccion, em.localidad, `DNI: ${em.dni}`, `Telf: ${em.telf}`], left, 142);
-            doc.text([rec.nombre, rec.direccion, rec.localidad, `CIF: ${rec.cif}`, `Telf: ${rec.telf}`], left + 300, 142);
+            doc.text([em.nombre, em.direccion, em.localidad, `DNI: ${em.dni}`, `Telf: ${em.telf}`], left, 142 + headerOffsetY);
+            doc.text([rec.nombre, rec.direccion, rec.localidad, `CIF: ${rec.cif}`, `Telf: ${rec.telf}`], left + 300, 142 + headerOffsetY);
 
             // Tabla con anchos cuidados
-            let y = 240; // espacio extra antes de primera línea (solicitado)
+            let y = 240 + headerOffsetY; // espacio extra antes de primera línea (solicitado)
 
             doc.setFont(undefined, 'bold');
             doc.setFillColor(245,245,245);
