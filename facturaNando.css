@@ -149,6 +149,32 @@ button:active{ transform:scale(0.98); }
 .bulk-actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
 .bulk-actions button{ background: linear-gradient(90deg,#163a5b,#2b6fb8); color:#fff; }
 
+/* Resumen de avisos */
+.avisos-summary{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:14px 0 12px;
+}
+.summary-chip{
+  padding:8px 12px;
+  border-radius:10px;
+  font-weight:800;
+  border:1px solid rgba(255,255,255,0.14);
+}
+.summary-total{
+  background: linear-gradient(90deg,#2b6fb8,#2ea8ff);
+  color:#f3fbff;
+}
+.summary-abierto{
+  background: linear-gradient(90deg,#ff003c,#ff2f2f);
+  color:#fff;
+}
+.summary-cerrado{
+  background: linear-gradient(90deg,#39ff14,#00ff66);
+  color:#021425;
+}
+
 /* Avisos list */
 .aviso-item{ display:flex; justify-content:space-between; gap:12px; padding:12px; border-radius:8px;
   background: linear-gradient(90deg, rgba(22,33,48,0.8), rgba(13,21,32,0.8)); border:1px solid rgba(255,255,255,0.09);
@@ -180,14 +206,16 @@ button:active{ transform:scale(0.98); }
 }
 .cerrado-toggle:active{ transform:scale(0.98); }
 .cerrado-toggle.cerrado{
-  background: var(--cerrado-bg);
-  color:#03240f;
-  border: 2px solid rgba(255,255,255,0.15);
+  background: linear-gradient(90deg,#39ff14,#00ff66);
+  color:#021425;
+  border: 2px solid rgba(255,255,255,0.28);
+  box-shadow: 0 0 14px rgba(57,255,20,0.72), 0 6px 16px rgba(0,0,0,0.25);
 }
 .cerrado-toggle.abierto{
-  background: var(--abierto-bg);
-  color:#e9f6ff;
-  border: 1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(90deg,#ff003c,#ff2f2f);
+  color:#fff;
+  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: 0 0 14px rgba(255,0,60,0.62), 0 6px 16px rgba(0,0,0,0.25);
 }
 
 /* Badge pequeño para indicar cerrado (si se necesita) */

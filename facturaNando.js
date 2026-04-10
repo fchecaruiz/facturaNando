@@ -1,8 +1,7 @@
 import { initializeApp as initializeFirebaseApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getFirestore, doc, getDoc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-/* facturaNando.js - actualizado: recuadro "CERRADO" y selección/facturación solo para cerrados.
-   Sustituye completamente tu fichero facturaNando.js por este contenido. */
+/* facturaNando.js - actualizado para gestionar avisos y facturación. */
 
 const firebaseConfig = {
     apiKey: "AIzaSyCF19HLZvvKOliKkaTvUF0DYU1ZlDgC_jM",
@@ -56,6 +55,7 @@ const app = {
     },
     ultimoNumeroFactura: 0,
     selectionMode: null,
+    activeSelectionFilter: null,
     firebaseReady: false,
     firebaseDocRef: null,
     firebaseUnsubscribe: null,
@@ -327,12 +327,6 @@ const app = {
                 const id = e.target.dataset.id;
                 const avis = this.avisos.find(a => String(a.id) === String(id));
                 if (avis) {
-                    // Solo permitir seleccionar si está cerrado (defensa extra)
-                    if (!avis.cerrado) {
-                        e.target.checked = false;
-                        this.showToast('info','El aviso no está cerrado. No se puede facturar.', 4000);
-                        return;
-                    }
                     avis.seleccionado = e.target.checked;
                     this.saveData();
                     this.updateFacturaPreview();
@@ -403,7 +397,10 @@ const app = {
         this.opciones.aseguradora.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; filtroAseg.appendChild(o); });
 
         const selAno = document.getElementById('filtroAno');
-        const anos = [...new Set(this.avisos.map(av => av.fechaAviso ? new Date(av.fechaAviso + 'T00:00:00').getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+        const anos = [...new Set(this.avisos.map(av => {
+            const dt = this.parseAvisoDate(av.fechaAviso);
+            return dt ? dt.getFullYear() : null;
+        }).filter(Boolean))].sort((a,b)=>b-a);
         selAno.innerHTML = '<option value="">Todos</option>';
         anos.forEach(ano => { const o = document.createElement('option'); o.value = ano; o.textContent = ano; selAno.appendChild(o); });
     },
@@ -564,16 +561,42 @@ const app = {
         this.showToast('info','Editando aviso (actualiza y guarda)', 4000);
     },
 
+    renderAvisosSummary() {
+        const summary = document.getElementById('avisos-summary');
+        if (!summary) return;
+
+        const totalAvisos = this.avisos.length;
+        const totalAbiertos = this.avisos.filter(av => !av.cerrado).length;
+        const totalCerrados = this.avisos.filter(av => av.cerrado).length;
+        const activeSelectionLabel = this.getActiveSelectionFilterLabel();
+        const importeAbiertos = this.avisos
+            .filter(av => !av.cerrado)
+            .reduce((acc, av) => acc + (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0), 0);
+        const importeCerrados = this.avisos
+            .filter(av => av.cerrado)
+            .reduce((acc, av) => acc + (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0), 0);
+
+        summary.innerHTML = `
+            <div class="summary-chip summary-total">Total avisos: <strong>${totalAvisos}</strong></div>
+            <div class="summary-chip summary-abierto">Abiertos: <strong>${totalAbiertos}</strong> | Importe: <strong>${importeAbiertos.toFixed(2)}€</strong></div>
+            <div class="summary-chip summary-cerrado">Cerrados: <strong>${totalCerrados}</strong> | Importe: <strong>${importeCerrados.toFixed(2)}€</strong></div>
+            ${activeSelectionLabel ? `<div class="summary-chip" style="background:linear-gradient(90deg,#f6c945,#f39c12); color:#1b1303;">Vista activa: <strong>${activeSelectionLabel}</strong></div>` : ''}
+        `;
+    },
+
     displayAvisos() {
         const container = document.getElementById('avisos-list');
         container.innerHTML = '';
+        this.renderAvisosSummary();
         const query = (document.getElementById('buscadorAvisos').value || '').trim().toLowerCase();
         const filtroAseg = document.getElementById('filtroAseguradora').value;
         const filtroAno = document.getElementById('filtroAno').value;
         const filtroMes = document.getElementById('filtroMes').value;
 
         const filtered = this.avisos.filter(av => {
-            const dt = av.fechaAviso ? new Date(av.fechaAviso + 'T00:00:00') : null;
+            if (!this.avisoMatchesActiveSelectionFilter(av)) return false;
+
+            const dt = this.parseAvisoDate(av.fechaAviso);
             const year = dt ? String(dt.getFullYear()) : '';
             const month = dt ? String(dt.getMonth() + 1) : '';
             let matchQuery = true;
@@ -597,7 +620,7 @@ const app = {
             const div = document.createElement('div'); div.className = 'aviso-item';
             div.innerHTML = `
                 <div class="aviso-left">
-                    <input type="checkbox" class="aviso-checkbox" data-id="${av.id}" ${av.seleccionado ? 'checked' : ''} ${av.cerrado ? '' : 'disabled'}>
+                    <input type="checkbox" class="aviso-checkbox" data-id="${av.id}" ${av.seleccionado ? 'checked' : ''}>
                     <div style="display:inline-block; margin-left:8px;">
                         <strong>Nº Aviso:</strong> ${av.numeroAviso}<br>
                         <small><strong>Fecha:</strong> ${av.fechaAviso || ''} — <strong>Aseg:</strong> ${av.aseguradora || ''} — <strong>Marca:</strong> ${av.marca || ''}</small><br>
@@ -635,16 +658,132 @@ const app = {
     },
 
     bulkSelect(mode) {
-        // Only select/deselect closed avisos
         if (mode === 'all') {
-            this.avisos.forEach(av => { if (av.cerrado) av.seleccionado = true; });
-            this.showToast('success','Avisos cerrados seleccionados', 4000);
+            this.activeSelectionFilter = null;
+            this.avisos.forEach(av => { av.seleccionado = true; });
+            this.showToast('success','Todos los avisos seleccionados', 4000);
         } else if (mode === 'none') {
+            this.activeSelectionFilter = null;
             this.avisos.forEach(av => av.seleccionado = false);
             this.showToast('info','Selección eliminada', 3000);
         }
         this.saveData();
         this.displayAvisos();
+    },
+
+    statusMatchesSelection(aviso, statusMode) {
+        if (statusMode === 'open') return !aviso.cerrado;
+        if (statusMode === 'closed') return aviso.cerrado;
+        return true;
+    },
+
+    avisoMatchesActiveSelectionFilter(aviso) {
+        if (!this.activeSelectionFilter) return true;
+        if (!aviso || !aviso.fechaAviso) return false;
+
+        const dt = this.parseAvisoDate(aviso.fechaAviso);
+        if (!dt) return false;
+
+        const filter = this.activeSelectionFilter;
+        if (!this.statusMatchesSelection(aviso, filter.statusMode || 'both')) return false;
+
+        if (filter.mode === 'month') {
+            const year = dt.getFullYear();
+            const month = dt.getMonth() + 1;
+            const yearOk = !filter.year || String(year) === String(filter.year);
+            return yearOk && Array.isArray(filter.months) && filter.months.includes(month);
+        }
+
+        if (filter.mode === 'year') {
+            const year = dt.getFullYear();
+            return Array.isArray(filter.years) && filter.years.includes(year);
+        }
+
+        if (filter.mode === 'week') {
+            const iso = getISOWeekInfo(dt);
+            const key = `${iso.year}-W${String(iso.week).padStart(2,'0')}`;
+            return Array.isArray(filter.weeks) && filter.weeks.includes(key);
+        }
+
+        return true;
+    },
+
+    getActiveSelectionFilterLabel() {
+        const filter = this.activeSelectionFilter;
+        if (!filter) return '';
+
+        const statusText = filter.statusMode === 'open'
+            ? 'solo abiertos'
+            : filter.statusMode === 'closed'
+                ? 'solo cerrados'
+                : 'abiertos y cerrados';
+
+        if (filter.mode === 'month') {
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const monthsLabel = Array.isArray(filter.months)
+                ? filter.months.map(m => monthNames[m - 1] || String(m)).join(', ')
+                : '';
+            const yearLabel = filter.year ? ` (${filter.year})` : '';
+            return `Mes: ${monthsLabel}${yearLabel} | ${statusText}`;
+        }
+
+        if (filter.mode === 'year') {
+            const yearsLabel = Array.isArray(filter.years) ? filter.years.join(', ') : '';
+            return `Año: ${yearsLabel} | ${statusText}`;
+        }
+
+        if (filter.mode === 'week') {
+            const weeksLabel = Array.isArray(filter.weeks) ? filter.weeks.join(', ') : '';
+            return `Semana: ${weeksLabel} | ${statusText}`;
+        }
+
+        return '';
+    },
+
+    parseAvisoDate(rawDate) {
+        if (!rawDate || typeof rawDate !== 'string') return null;
+
+        const trimmed = rawDate.trim();
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            const isoDate = new Date(`${trimmed}T00:00:00`);
+            return Number.isNaN(isoDate.getTime()) ? null : isoDate;
+        }
+
+        const match = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+        if (match) {
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1;
+            const year = parseInt(match[3], 10);
+            const parsed = new Date(year, month, day);
+
+            if (
+                parsed.getFullYear() === year &&
+                parsed.getMonth() === month &&
+                parsed.getDate() === day
+            ) {
+                return parsed;
+            }
+        }
+
+        const fallback = new Date(trimmed);
+        return Number.isNaN(fallback.getTime()) ? null : fallback;
+    },
+
+    getSelectionStatusMode() {
+        const selectedStatus = document.querySelector('input[name="selection-status"]:checked');
+        return selectedStatus ? selectedStatus.value : 'both';
+    },
+
+    buildSelectionStatusControls() {
+        return `
+            <div style="margin-bottom:12px; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.03);">
+                <strong style="display:block; margin-bottom:6px;">Estado a seleccionar</strong>
+                <label style="margin-right:12px;"><input type="radio" name="selection-status" value="both" checked> Abiertos y cerrados</label>
+                <label style="margin-right:12px;"><input type="radio" name="selection-status" value="open"> Solo abiertos</label>
+                <label><input type="radio" name="selection-status" value="closed"> Solo cerrados</label>
+            </div>
+        `;
     },
 
     openSelectionModal(mode) {
@@ -653,10 +792,13 @@ const app = {
         const title = document.getElementById('select-modal-title');
         const body = document.getElementById('select-modal-body');
         title.textContent = mode === 'month' ? 'Seleccionar meses' : mode === 'week' ? 'Seleccionar semanas' : 'Seleccionar años';
-        body.innerHTML = '';
+        body.innerHTML = this.buildSelectionStatusControls();
 
         if (mode === 'month') {
-            const years = [...new Set(this.avisos.map(a => a.fechaAviso ? new Date(a.fechaAviso + 'T00:00:00').getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+            const years = [...new Set(this.avisos.map(a => {
+                const dt = this.parseAvisoDate(a.fechaAviso);
+                return dt ? dt.getFullYear() : null;
+            }).filter(Boolean))].sort((a,b)=>b-a);
             const ySel = document.createElement('select'); ySel.id = 'sel-month-year';
             if (years.length) {
                 years.forEach(y=> { const o = document.createElement('option'); o.value = y; o.textContent = y; ySel.appendChild(o); });
@@ -665,27 +807,31 @@ const app = {
             }
             const monthsHtml = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
                 .map((m,i)=>`<label style="display:inline-block; margin:6px;"><input type="checkbox" data-month="${i+1}"> ${m}</label>`).join('');
-            body.innerHTML = `<div style="text-align:center; margin-bottom:8px;"><strong>Año:</strong> </div><div style="text-align:center; margin-bottom:10px;">${ySel.outerHTML}</div><div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">${monthsHtml}</div>`;
+            body.innerHTML += `<div style="text-align:center; margin-bottom:8px;"><strong>Año:</strong> </div><div style="text-align:center; margin-bottom:10px;">${ySel.outerHTML}</div><div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">${monthsHtml}</div>`;
         } else if (mode === 'year') {
-            const years = [...new Set(this.avisos.map(a => a.fechaAviso ? new Date(a.fechaAviso + 'T00:00:00').getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
-            if (!years.length) body.innerHTML = '<p style="text-align:center;">No hay años disponibles en los avisos.</p>';
+            const years = [...new Set(this.avisos.map(a => {
+                const dt = this.parseAvisoDate(a.fechaAviso);
+                return dt ? dt.getFullYear() : null;
+            }).filter(Boolean))].sort((a,b)=>b-a);
+            if (!years.length) body.innerHTML += '<p style="text-align:center;">No hay años disponibles en los avisos.</p>';
             else {
-                body.innerHTML = years.map(y=>`<label style="display:block; text-align:center; margin:6px;"><input type="checkbox" data-year="${y}"> ${y}</label>`).join('');
+                body.innerHTML += years.map(y=>`<label style="display:block; text-align:center; margin:6px;"><input type="checkbox" data-year="${y}"> ${y}</label>`).join('');
             }
         } else if (mode === 'week') {
             const weeksMap = {};
             this.avisos.forEach(av => {
                 if (!av.fechaAviso) return;
-                const dt = new Date(av.fechaAviso + 'T00:00:00');
+                const dt = this.parseAvisoDate(av.fechaAviso);
+                if (!dt) return;
                 const iso = getISOWeekInfo(dt);
                 const key = `${iso.year}-W${String(iso.week).padStart(2,'0')}`;
                 if (!weeksMap[key]) weeksMap[key] = { start: iso.start, end: iso.end, count: 0 };
                 weeksMap[key].count++;
             });
             const entries = Object.keys(weeksMap).sort().reverse();
-            if (!entries.length) body.innerHTML = '<p style="text-align:center;">No hay semanas disponibles en los avisos.</p>';
+            if (!entries.length) body.innerHTML += '<p style="text-align:center;">No hay semanas disponibles en los avisos.</p>';
             else {
-                body.innerHTML = entries.map(k=>{
+                body.innerHTML += entries.map(k=>{
                     const w = weeksMap[k];
                     const label = `${k} (${formatDate(w.start)} → ${formatDate(w.end)}) - ${w.count} aviso(s)`;
                     return `<label style="display:block; margin:6px;"><input type="checkbox" data-week="${k}"> ${label}</label>`;
@@ -702,47 +848,87 @@ const app = {
         const mode = this.selectionMode;
         if (!mode) return;
         const body = document.getElementById('select-modal-body');
-        const checkboxes = body.querySelectorAll('input[type="checkbox"]');
-        const selected = Array.from(checkboxes).filter(cb => cb.checked);
+        const statusMode = this.getSelectionStatusMode();
 
-        if (!selected.length) { this.showToast('info','No se seleccionó nada', 4000); return; }
+        // La selección por mes/semana/año debe sustituir la selección actual, no acumularla.
+        this.avisos.forEach(av => {
+            av.seleccionado = false;
+        });
 
         if (mode === 'month') {
+            const monthChecks = Array.from(body.querySelectorAll('input[data-month]')).filter(cb => cb.checked);
+            if (!monthChecks.length) {
+                this.activeSelectionFilter = null;
+                this.displayAvisos();
+                this.updateFacturaPreview();
+                this.closeSelectionModal();
+                this.showToast('info','Sin selección: se muestran todos los avisos', 4000);
+                return;
+            }
+
             const yearSel = document.getElementById('sel-month-year');
             const year = yearSel ? yearSel.value : null;
-            const months = selected.map(cb => parseInt(cb.dataset.month,10));
+            const months = monthChecks.map(cb => parseInt(cb.dataset.month,10));
+            this.activeSelectionFilter = { mode: 'month', year, months, statusMode };
             this.avisos.forEach(av => {
                 if (!av.fechaAviso) return;
-                const dt = new Date(av.fechaAviso + 'T00:00:00');
+                const dt = this.parseAvisoDate(av.fechaAviso);
+                if (!dt) return;
                 const y = dt.getFullYear();
                 const m = dt.getMonth() + 1;
-                if ((!year || String(y) === String(year)) && months.includes(m)) {
-                    if (av.cerrado) av.seleccionado = true;
+                if ((!year || String(y) === String(year)) && months.includes(m) && this.statusMatchesSelection(av, statusMode)) {
+                    av.seleccionado = true;
                 }
             });
         } else if (mode === 'year') {
-            const years = selected.map(cb => parseInt(cb.dataset.year,10));
+            const yearChecks = Array.from(body.querySelectorAll('input[data-year]')).filter(cb => cb.checked);
+            if (!yearChecks.length) {
+                this.activeSelectionFilter = null;
+                this.displayAvisos();
+                this.updateFacturaPreview();
+                this.closeSelectionModal();
+                this.showToast('info','Sin selección: se muestran todos los avisos', 4000);
+                return;
+            }
+
+            const years = yearChecks.map(cb => parseInt(cb.dataset.year,10));
+            this.activeSelectionFilter = { mode: 'year', years, statusMode };
             this.avisos.forEach(av => {
                 if (!av.fechaAviso) return;
-                const y = new Date(av.fechaAviso + 'T00:00:00').getFullYear();
-                if (years.includes(y) && av.cerrado) av.seleccionado = true;
+                const dt = this.parseAvisoDate(av.fechaAviso);
+                if (!dt) return;
+                const y = dt.getFullYear();
+                if (years.includes(y) && this.statusMatchesSelection(av, statusMode)) av.seleccionado = true;
             });
         } else if (mode === 'week') {
-            const weeks = selected.map(cb => cb.dataset.week);
+            const weekChecks = Array.from(body.querySelectorAll('input[data-week]')).filter(cb => cb.checked);
+            if (!weekChecks.length) {
+                this.activeSelectionFilter = null;
+                this.displayAvisos();
+                this.updateFacturaPreview();
+                this.closeSelectionModal();
+                this.showToast('info','Sin selección: se muestran todos los avisos', 4000);
+                return;
+            }
+
+            const weeks = weekChecks.map(cb => cb.dataset.week);
+            this.activeSelectionFilter = { mode: 'week', weeks, statusMode };
             this.avisos.forEach(av => {
                 if (!av.fechaAviso) return;
-                const dt = new Date(av.fechaAviso + 'T00:00:00');
+                const dt = this.parseAvisoDate(av.fechaAviso);
+                if (!dt) return;
                 const iso = getISOWeekInfo(dt);
                 const key = `${iso.year}-W${String(iso.week).padStart(2,'0')}`;
-                if (weeks.includes(key) && av.cerrado) av.seleccionado = true;
+                if (weeks.includes(key) && this.statusMatchesSelection(av, statusMode)) av.seleccionado = true;
             });
         }
 
+        const totalSeleccionados = this.avisos.filter(av => av.seleccionado).length;
         this.saveData();
         this.displayAvisos();
         this.updateFacturaPreview();
         this.closeSelectionModal();
-        this.showToast('success','Selección aplicada (solo cerrados)', 4000);
+        this.showToast('success',`Selección aplicada: ${totalSeleccionados} aviso(s)`, 4000);
     },
 
     updateFacturaPreview() {
@@ -815,7 +1001,11 @@ const app = {
 
         // cálculos (75/25)
         let baseTotal = 0, base75Total = 0, base25Total = 0;
-        const seleccionadosOrdenados = [...seleccionados].sort((a,b) => new Date(a.fechaAviso) - new Date(b.fechaAviso));
+        const seleccionadosOrdenados = [...seleccionados].sort((a,b) => {
+            const dateA = this.parseAvisoDate(a.fechaAviso);
+            const dateB = this.parseAvisoDate(b.fechaAviso);
+            return (dateA ? dateA.getTime() : 0) - (dateB ? dateB.getTime() : 0);
+        });
         seleccionadosOrdenados.forEach(av => {
             const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
             baseTotal += subtotal;
