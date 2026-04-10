@@ -4,14 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>facturaNando</title>
-  <link rel="stylesheet" href="facturaNando.css?v=20260410-1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="facturaNando.css?v=20260410-2">
 </head>
 <body class="vibrant-mode">
   <div class="container">
-    <h1>facturaNando</h1>
-    <h3>Gestión de avisos y facturación</h3>
+    <header class="hero-header">
+      <p class="hero-tag">Panel profesional</p>
+      <h1>facturaNando</h1>
+      <h3>Gestión de avisos y facturación</h3>
+    </header>
 
-    <div class="card" id="aviso-form-section">
+    <div class="card card-form" id="aviso-form-section">
       <form id="aviso-form">
         <div class="grid-2">
           <div>
@@ -65,7 +71,7 @@
       </form>
     </div>
 
-    <div class="card">
+    <div class="card card-list">
       <div class="search-row">
         <input id="buscadorAvisos" type="text" placeholder="Buscar avisos..." />
         <button id="limpiar-busqueda" class="manage-btn">Limpiar</button>
@@ -97,10 +103,10 @@
       <div id="avisos-list"></div>
     </div>
 
-    <div class="card">
+    <div class="card card-preview">
       <h4>Preview factura</h4>
       <div id="factura-preview"></div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px;">
+      <div class="action-grid">
         <button id="generar-factura-pdf" class="btn-pdf">Generar Factura en PDF</button>
         <button id="guardar-datos-btn">Guardar Datos de Facturación</button>
       </div>
@@ -169,7 +175,7 @@
       <span class="close-select">&times;</span>
       <h3 id="select-modal-title">Seleccionar</h3>
       <div id="select-modal-body"></div>
-      <div style="display:flex; gap:8px; margin-top:12px;">
+      <div class="modal-actions">
         <button id="apply-selection-btn" class="manage-btn">Aplicar</button>
         <button id="cancel-selection-btn">Cancelar</button>
       </div>
@@ -182,6 +188,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- Script principal -->
-  <script type="module" src="facturaNando.js?v=20260410-1"></script>
+  <script type="module" src="facturaNando.js?v=20260410-2"></script>
 </body>
 </html>
