@@ -335,6 +335,7 @@ const app = {
         });
 
         document.getElementById('generar-factura-pdf').addEventListener('click', () => this.generarFacturaPDF());
+        document.getElementById('reset-factura-num').addEventListener('click', () => this.resetNumeroFactura());
 
         // Modal manage
         document.querySelector('#manage-modal .close').addEventListener('click', () => document.getElementById('manage-modal').style.display = 'none');
@@ -1140,6 +1141,15 @@ const app = {
             console.error(err);
             alert("Error crítico al generar el PDF.");
         }
+    },
+
+    resetNumeroFactura() {
+        const confirmado = confirm('¿Quieres reiniciar la numeración de facturas? La siguiente será FAC-0001.');
+        if (!confirmado) return;
+
+        this.ultimoNumeroFactura = 0;
+        this.saveData();
+        this.showToast('success', 'Numeración reiniciada. La siguiente factura será FAC-0001.', 4500);
     },
 
     showToast(type = 'info', message = '', duration = 4000) {

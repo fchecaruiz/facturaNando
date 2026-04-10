@@ -55,8 +55,21 @@ body.vibrant-mode{
 h1{ text-align:center; margin:0 0 8px; font-size:1.9rem; color:var(--text); }
 h3{ margin:0 0 18px; color:var(--muted); }
 
-.logo-wrap{ display:flex; justify-content:center; margin-bottom:6px; }
-.app-logo{ width:min(520px, 90%); height:auto; display:block; filter: drop-shadow(0 8px 20px rgba(0,0,0,0.35)); }
+.logo-wrap{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+  margin-bottom:6px;
+}
+.app-logo{
+  width: clamp(190px, 42vw, 360px);
+  max-width: 100%;
+  height:auto;
+  margin: 0 auto;
+  display:block;
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.35));
+}
 
 .card{
   background: linear-gradient(160deg, rgba(28,40,58,0.85), rgba(18,27,41,0.85));
@@ -282,4 +295,6 @@ button:active{ transform:scale(0.98); }
   .aviso-item{ flex-direction:column; align-items:flex-start; }
   .filter-controls{ gap:6px; }
   .bulk-actions{ gap:6px; }
+  .logo-wrap{ justify-content:center; }
+  .app-logo{ width:min(260px, 78vw); }
 }
