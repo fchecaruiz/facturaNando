@@ -310,10 +310,18 @@ const app = {
         });
 
         document.getElementById('buscadorAvisos').addEventListener('input', () => this.displayAvisos());
-        document.getElementById('limpiar-busqueda').addEventListener('click', () => { document.getElementById('buscadorAvisos').value = ''; this.displayAvisos(); });
+        document.getElementById('limpiar-busqueda').addEventListener('click', () => {
+            document.getElementById('buscadorAvisos').value = '';
+            document.getElementById('filtroAseguradora').value = '';
+            document.getElementById('filtroAno').value = '';
+            document.getElementById('filtroMes').value = '';
+            document.getElementById('filtroEstado').value = '';
+            this.displayAvisos();
+        });
         document.getElementById('filtroAseguradora').addEventListener('change', () => this.displayAvisos());
         document.getElementById('filtroAno').addEventListener('change', () => this.displayAvisos());
         document.getElementById('filtroMes').addEventListener('change', () => this.displayAvisos());
+        document.getElementById('filtroEstado').addEventListener('change', () => this.displayAvisos());
         document.getElementById('aplicar-filtro-btn').addEventListener('click', () => this.displayAvisos());
 
         document.getElementById('sel-all').addEventListener('click', () => this.bulkSelect('all'));
@@ -491,11 +499,13 @@ const app = {
         const aseguradora = document.getElementById('aseguradora').value;
         const marca = document.getElementById('marca').value;
         const tipoAparato = document.getElementById('tipoAparato').value;
+        const nombreCliente = document.getElementById('nombreCliente').value.trim();
         const manoObra = parseFloat(document.getElementById('manoObra').value) || 0;
         const desplazamientoKm = parseFloat(document.getElementById('desplazamientoKm').value) || 0;
         const importeDesplazamiento = parseFloat((desplazamientoKm * 0.30).toFixed(2));
         const codigoRecambio = document.getElementById('codigoRecambio').value;
         const importeRecambios = parseFloat(document.getElementById('importeRecambios').value) || 0;
+        const observaciones = document.getElementById('observacionesAviso').value.trim();
 
         if (!numeroAviso) { this.showToast('info','Introduce número de aviso', 4000); return; }
 
@@ -506,12 +516,12 @@ const app = {
             if (idx===-1) { this.showToast('danger','Aviso no encontrado para actualizar', 4000); return; }
             // Preserve cerrado / seleccionado states
             const preserved = { cerrado: this.avisos[idx].cerrado || false, seleccionado: this.avisos[idx].seleccionado || false };
-            this.avisos[idx] = { ...this.avisos[idx], numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, ...preserved };
+            this.avisos[idx] = { ...this.avisos[idx], numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, ...preserved };
             delete form.dataset.editId;
             document.getElementById('guardar-aviso-btn').textContent = 'Guardar Aviso';
             this.showToast('info','Aviso actualizado', 4000);
         } else {
-            const nuevo = { id: this.createUniqueAvisoId(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, seleccionado:false, cerrado:false };
+            const nuevo = { id: this.createUniqueAvisoId(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, seleccionado:false, cerrado:false };
             this.avisos.push(nuevo);
             this.showToast('success','Aviso registrado', 4000);
         }
@@ -551,10 +561,12 @@ const app = {
         document.getElementById('aseguradora').value = avis.aseguradora;
         document.getElementById('marca').value = avis.marca;
         document.getElementById('tipoAparato').value = avis.tipoAparato;
+        document.getElementById('nombreCliente').value = avis.nombreCliente || '';
         document.getElementById('manoObra').value = avis.manoObra;
         document.getElementById('desplazamientoKm').value = avis.desplazamientoKm;
         document.getElementById('codigoRecambio').value = avis.codigoRecambio;
         document.getElementById('importeRecambios').value = avis.importeRecambios;
+        document.getElementById('observacionesAviso').value = avis.observaciones || '';
 
         document.getElementById('aviso-form').dataset.editId = id;
         document.getElementById('guardar-aviso-btn').textContent = 'Actualizar Aviso';
@@ -589,10 +601,11 @@ const app = {
         const container = document.getElementById('avisos-list');
         container.innerHTML = '';
         this.renderAvisosSummary();
-        const query = (document.getElementById('buscadorAvisos').value || '').trim().toLowerCase();
+        const query = this.normalizeSearchText((document.getElementById('buscadorAvisos').value || '').trim());
         const filtroAseg = document.getElementById('filtroAseguradora').value;
         const filtroAno = document.getElementById('filtroAno').value;
         const filtroMes = document.getElementById('filtroMes').value;
+        const filtroEstado = document.getElementById('filtroEstado').value;
 
         const filtered = this.avisos.filter(av => {
             if (!this.avisoMatchesActiveSelectionFilter(av)) return false;
@@ -602,13 +615,14 @@ const app = {
             const month = dt ? String(dt.getMonth() + 1) : '';
             let matchQuery = true;
             if (query) {
-                const hay = `${av.numeroAviso} ${av.aseguradora} ${av.marca} ${av.tipoAparato} ${year}`.toLowerCase();
+                const hay = this.buildAvisoSearchText(av, year, month);
                 matchQuery = hay.includes(query);
             }
             const matchAseg = filtroAseg ? av.aseguradora === filtroAseg : true;
             const matchYear = filtroAno ? year === filtroAno : true;
             const matchMonth = filtroMes ? month === filtroMes : true;
-            return matchQuery && matchAseg && matchYear && matchMonth;
+            const matchEstado = filtroEstado ? ((filtroEstado === 'cerrado' && av.cerrado) || (filtroEstado === 'abierto' && !av.cerrado)) : true;
+            return matchQuery && matchAseg && matchYear && matchMonth && matchEstado;
         });
 
         if (!filtered.length) { container.innerHTML = '<p class="no-avisos">No hay avisos para los filtros/búsqueda.</p>'; this.updateFacturaPreview(); return; }
@@ -619,13 +633,15 @@ const app = {
             const base25 = parseFloat((subtotal * 0.25).toFixed(2));
 
             const div = document.createElement('div'); div.className = 'aviso-item';
+            const observaciones = av.observaciones ? this.escapeHtml(av.observaciones) : '';
             div.innerHTML = `
                 <div class="aviso-left">
                     <input type="checkbox" class="aviso-checkbox" data-id="${av.id}" ${av.seleccionado ? 'checked' : ''}>
                     <div style="display:inline-block; margin-left:8px;">
-                        <strong>Nº Aviso:</strong> ${av.numeroAviso}<br>
-                        <small><strong>Fecha:</strong> ${av.fechaAviso || ''} — <strong>Aseg:</strong> ${av.aseguradora || ''} — <strong>Marca:</strong> ${av.marca || ''}</small><br>
-                        <small><strong>Tipo:</strong> ${av.tipoAparato || ''}</small><br>
+                        <strong>Nº Aviso:</strong> ${this.escapeHtml(av.numeroAviso || '')}<br>
+                        <small><strong>Fecha:</strong> ${this.escapeHtml(av.fechaAviso || '')} — <strong>Aseg:</strong> ${this.escapeHtml(av.aseguradora || '')} — <strong>Marca:</strong> ${this.escapeHtml(av.marca || '')}</small><br>
+                        <small><strong>Tipo:</strong> ${this.escapeHtml(av.tipoAparato || '')} — <strong>Cliente:</strong> ${this.escapeHtml(av.nombreCliente || '')}</small><br>
+                        ${observaciones ? `<small><strong>Observaciones:</strong> ${observaciones}</small><br>` : ''}
                         <small><strong>Subtotal:</strong> <span class="importe-principal">${subtotal.toFixed(2)}€</span> | <strong>75%:</strong> <span class="importe-secundario">${base75.toFixed(2)}€</span> | <strong>25%:</strong> <span class="importe-destacado">${base25.toFixed(2)}€</span></small>
                     </div>
                 </div>
@@ -656,6 +672,46 @@ const app = {
         });
 
         this.updateFacturaPreview();
+    },
+
+    normalizeSearchText(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+    },
+
+    buildAvisoSearchText(aviso, year = '', month = '') {
+        const estado = aviso.cerrado ? 'cerrado' : 'abierto';
+        const haystack = [
+            aviso.numeroAviso,
+            aviso.fechaAviso,
+            aviso.aseguradora,
+            aviso.marca,
+            aviso.tipoAparato,
+            aviso.nombreCliente,
+            aviso.codigoRecambio,
+            aviso.observaciones,
+            aviso.manoObra,
+            aviso.desplazamientoKm,
+            aviso.importeDesplazamiento,
+            aviso.importeRecambios,
+            year,
+            month,
+            estado,
+            this.datosFacturacion?.receptor?.nombre,
+            this.datosFacturacion?.receptor?.cif
+        ];
+        return this.normalizeSearchText(haystack.join(' '));
+    },
+
+    escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     },
 
     bulkSelect(mode) {

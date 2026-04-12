@@ -92,12 +92,16 @@ h3{ margin:0 0 18px; color:var(--muted); }
 
 /* Inputs & selects */
 label{ display:block; margin-bottom:6px; color:var(--muted); font-weight:700; }
-input[type="text"], input[type="number"], input[type="date"], input[type="email"], select {
+input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea {
   width:100%; padding:10px 12px; border-radius:8px; margin-bottom:10px;
   border:1px solid rgba(255,255,255,0.12);
   background: rgba(7,12,20,0.7);
   color: var(--rojo-visible) !important;
   font-weight:800; box-sizing:border-box;
+}
+textarea{
+  resize: vertical;
+  min-height: 72px;
 }
 
 /* Hacer visible y clicable el selector de calendario en el campo fecha */
@@ -198,6 +202,7 @@ button:active{ transform:scale(0.98); }
 .aviso-left{ display:flex; gap:8px; align-items:flex-start; }
 .aviso-item strong{ color:var(--rojo-visible); font-weight:900; }
 .aviso-item small{ color:var(--muted); display:block; }
+.aviso-item small{ word-break: break-word; }
 
 .aviso-actions{ display:flex; gap:8px; align-items:center; }
 
