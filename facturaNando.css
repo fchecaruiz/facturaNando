@@ -44,6 +44,65 @@ body.vibrant-mode{
   color: var(--text);
 }
 
+body.auth-pending{
+  display:block;
+}
+
+.auth-screen{
+  display:none;
+  min-height:100vh;
+  align-items:center;
+  justify-content:center;
+}
+
+body.auth-pending .auth-screen{
+  display:flex;
+}
+
+.app-shell{
+  display:block;
+}
+
+body.auth-pending .app-shell{
+  display:none;
+}
+
+.auth-card{
+  width:min(100%, 420px);
+  padding:28px;
+  border-radius:18px;
+  background: linear-gradient(160deg, rgba(23,34,49,0.96), rgba(10,17,27,0.96));
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+}
+
+.auth-logo{
+  width: clamp(180px, 50vw, 280px);
+  display:block;
+  margin:0 auto 12px;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,0.35));
+}
+
+.auth-card h2{
+  margin:0 0 8px;
+  text-align:center;
+}
+
+.auth-description,
+.auth-hint{
+  text-align:center;
+  color: var(--muted);
+}
+
+.auth-form{
+  margin-top:18px;
+}
+
+.auth-hint{
+  min-height:20px;
+  margin:12px 0 0;
+}
+
 .container{
   max-width:1200px; margin:0 auto;
   padding:22px; border-radius:12px;
@@ -77,6 +136,34 @@ h3{ margin:0 0 18px; color:var(--muted); }
   border:1px solid rgba(255,255,255,0.08);
 }
 
+.top-actions{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin:0 0 14px;
+  padding:10px 14px;
+  border-radius:10px;
+  background: linear-gradient(90deg, rgba(31,111,235,0.16), rgba(46,168,255,0.08));
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.session-user-label{
+  color: var(--text);
+  font-weight:800;
+}
+
+.top-actions-buttons{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.logout-btn{
+  background: linear-gradient(90deg,#7f1d1d,#dc2626);
+  color:#fff;
+}
+
 /* Billing card (oscuro) */
 .billing-card{
   background: var(--billing-bg);
@@ -92,7 +179,7 @@ h3{ margin:0 0 18px; color:var(--muted); }
 
 /* Inputs & selects */
 label{ display:block; margin-bottom:6px; color:var(--muted); font-weight:700; }
-input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea {
+input[type="text"], input[type="password"], input[type="number"], input[type="date"], input[type="email"], select, textarea {
   width:100%; padding:10px 12px; border-radius:8px; margin-bottom:10px;
   border:1px solid rgba(255,255,255,0.12);
   background: rgba(7,12,20,0.7);
@@ -302,4 +389,7 @@ button:active{ transform:scale(0.98); }
   .bulk-actions{ gap:6px; }
   .logo-wrap{ justify-content:center; }
   .app-logo{ width:min(260px, 78vw); }
+  .top-actions{ flex-direction:column; align-items:stretch; }
+  .top-actions-buttons{ width:100%; }
+  .top-actions-buttons button{ width:100%; }
 }

@@ -4,15 +4,40 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>facturaNando</title>
-  <link rel="stylesheet" href="facturaNando.css?v=20260412-1">
+  <link rel="stylesheet" href="facturaNando.css?v=20260417-1">
 </head>
-<body class="vibrant-mode">
+<body class="vibrant-mode auth-pending">
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <img src="facturaNando-logo.svg?v=20260410-2" alt="Logo facturaNando" class="auth-logo" />
+      <h2 id="auth-title">Acceso a facturaNando</h2>
+      <p id="auth-description" class="auth-description">Introduce tu usuario y contraseña para entrar.</p>
+      <form id="auth-form" class="auth-form" autocomplete="off">
+        <label for="auth-username">Usuario</label>
+        <input id="auth-username" type="text" autocomplete="username" />
+        <label for="auth-password">Contraseña</label>
+        <input id="auth-password" type="password" autocomplete="current-password" />
+        <button id="auth-submit-btn" type="submit">Entrar</button>
+      </form>
+      <p id="auth-hint" class="auth-hint"></p>
+    </div>
+  </div>
+
+  <div id="app-shell" class="app-shell">
   <div class="container">
     <div class="logo-wrap">
       <img src="facturaNando-logo.svg?v=20260410-2" alt="Logo facturaNando" class="app-logo" />
     </div>
     <h1>facturaNando</h1>
     <h3>Gestión de avisos y facturación</h3>
+
+    <div id="top-actions" class="top-actions">
+      <span id="session-user-label" class="session-user-label"></span>
+      <div class="top-actions-buttons">
+        <button id="change-credentials-btn" type="button" class="manage-btn">Cambiar acceso</button>
+        <button id="logout-btn" type="button" class="logout-btn">Cerrar sesión</button>
+      </div>
+    </div>
 
     <div class="card" id="aviso-form-section">
       <form id="aviso-form">
@@ -197,6 +222,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- Script principal -->
-  <script type="module" src="facturaNando.js?v=20260412-2"></script>
+  <script type="module" src="facturaNando.js?v=20260417-1"></script>
+  </div>
+</div>
 </body>
 </html>

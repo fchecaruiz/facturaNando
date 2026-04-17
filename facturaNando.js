@@ -17,6 +17,14 @@ const firestoreDb = getFirestore(firebaseWebApp);
 
 const app = {
     avisos: [],
+    auth: {
+        credentials: {
+            username: '',
+            password: ''
+        },
+        isAuthenticated: false,
+        mode: 'login'
+    },
     opciones: {
         aseguradora: [
             "SEJESCAR", "MESOS GESTION", "CATALANA OCCIDENTE",
@@ -97,11 +105,14 @@ const app = {
         this.loadData();
         this.loadOpciones();
         this.loadDatosFacturacion();
+        this.loadAuthData();
         this.populateSelects();
         this.populateFilterOptions();
         this.setupEventListeners();
         this.displayAvisos();
+        this.updateAuthUI();
         await this.initFirebaseRealtime();
+        this.updateAuthUI();
     },
 
     getSharedStatePayload() {
@@ -114,6 +125,12 @@ const app = {
             },
             ultimoNumeroFactura: Number(this.ultimoNumeroFactura) || 0,
             datosFacturacion: this.datosFacturacion,
+            auth: {
+                credentials: {
+                    username: this.auth.credentials.username,
+                    password: this.auth.credentials.password
+                }
+            },
             updatedAt: Date.now()
         };
     },
@@ -146,12 +163,24 @@ const app = {
                 };
             }
 
+            if (state.auth && typeof state.auth === 'object' && state.auth.credentials) {
+                const remoteUsername = this.normalizeCredential(state.auth.credentials.username);
+                const remotePassword = this.normalizeCredential(state.auth.credentials.password);
+                if (remoteUsername && remotePassword) {
+                    this.auth.credentials = {
+                        username: remoteUsername,
+                        password: remotePassword
+                    };
+                }
+            }
+
             const idsCorregidos = this.ensureUniqueAvisoIds();
             this.saveData();
             this.populateSelects();
             this.populateFilterOptions();
             this.renderDatosFacturacionInputs();
             this.displayAvisos();
+            this.updateAuthUI();
             if (idsCorregidos) this.scheduleCloudSave();
         } finally {
             this.isApplyingRemoteState = false;
@@ -233,6 +262,23 @@ const app = {
             localStorage.setItem('facturaNandoOpciones', JSON.stringify(this.opciones));
         }
     },
+    loadAuthData() {
+        try {
+            const stored = localStorage.getItem('facturaNandoAuth');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                this.auth.credentials = {
+                    username: this.normalizeCredential(parsed.username),
+                    password: this.normalizeCredential(parsed.password)
+                };
+            }
+        } catch (err) {
+            console.warn('Error cargando credenciales de acceso', err);
+            this.auth.credentials = { username: '', password: '' };
+        }
+
+        this.syncAuthModeWithStorage();
+    },
     saveData() {
         try {
             localStorage.setItem('facturaNandoAvisos', JSON.stringify(this.avisos));
@@ -240,11 +286,151 @@ const app = {
             localStorage.setItem('ultimoNumeroFactura', String(this.ultimoNumeroFactura));
             localStorage.setItem('datosEmisor', JSON.stringify(this.datosFacturacion.emisor));
             localStorage.setItem('datosReceptor', JSON.stringify(this.datosFacturacion.receptor));
+            localStorage.setItem('facturaNandoAuth', JSON.stringify(this.auth.credentials));
             localStorage.setItem('facturaNandoSharedState', JSON.stringify(this.getSharedStatePayload()));
             this.scheduleCloudSave();
         } catch (err) {
             console.error('Error guardando datos en localStorage', err);
         }
+    },
+
+    normalizeCredential(value) {
+        return String(value || '').trim();
+    },
+
+    hasConfiguredCredentials() {
+        return Boolean(this.auth.credentials.username && this.auth.credentials.password);
+    },
+
+    syncAuthModeWithStorage() {
+        if (this.auth.mode === 'change') return;
+        this.auth.mode = this.hasConfiguredCredentials() ? 'login' : 'setup';
+    },
+
+    renderAuthScreen() {
+        const title = document.getElementById('auth-title');
+        const description = document.getElementById('auth-description');
+        const hint = document.getElementById('auth-hint');
+        const submit = document.getElementById('auth-submit-btn');
+        const usernameInput = document.getElementById('auth-username');
+        const passwordInput = document.getElementById('auth-password');
+
+        if (!title || !description || !hint || !submit || !usernameInput || !passwordInput) return;
+
+        this.syncAuthModeWithStorage();
+
+        if (this.auth.mode === 'setup') {
+            title.textContent = 'Crear acceso';
+            description.textContent = 'Define el usuario y la contraseña que usarás para entrar en la app.';
+            hint.textContent = 'Este paso solo aparece la primera vez o si todavía no hay acceso configurado.';
+            submit.textContent = 'Guardar acceso';
+            usernameInput.placeholder = 'Usuario';
+            passwordInput.placeholder = 'Contraseña';
+            usernameInput.autocomplete = 'username';
+            passwordInput.autocomplete = 'new-password';
+            usernameInput.value = '';
+            passwordInput.value = '';
+            return;
+        }
+
+        if (this.auth.mode === 'change') {
+            title.textContent = 'Cambiar acceso';
+            description.textContent = 'Introduce el nuevo usuario y la nueva contraseña para esta app.';
+            hint.textContent = 'El cambio se guardará también para la sincronización compartida.';
+            submit.textContent = 'Actualizar acceso';
+            usernameInput.placeholder = this.auth.credentials.username || 'Nuevo usuario';
+            passwordInput.placeholder = 'Nueva contraseña';
+            usernameInput.autocomplete = 'username';
+            passwordInput.autocomplete = 'new-password';
+            usernameInput.value = this.auth.credentials.username || '';
+            passwordInput.value = '';
+            return;
+        }
+
+        title.textContent = 'Acceso a facturaNando';
+        description.textContent = 'Introduce tu usuario y contraseña para entrar.';
+        hint.textContent = this.auth.credentials.username ? `Usuario actual: ${this.auth.credentials.username}` : '';
+        submit.textContent = 'Entrar';
+        usernameInput.placeholder = 'Usuario';
+        passwordInput.placeholder = 'Contraseña';
+        usernameInput.autocomplete = 'username';
+        passwordInput.autocomplete = 'current-password';
+        usernameInput.value = '';
+        passwordInput.value = '';
+    },
+
+    updateAuthUI() {
+        this.renderAuthScreen();
+        document.body.classList.toggle('auth-pending', !this.auth.isAuthenticated);
+
+        const sessionUserLabel = document.getElementById('session-user-label');
+        const changeCredentialsBtn = document.getElementById('change-credentials-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        if (sessionUserLabel) {
+            sessionUserLabel.textContent = this.auth.isAuthenticated && this.auth.credentials.username
+                ? `Sesión iniciada: ${this.auth.credentials.username}`
+                : '';
+        }
+
+        if (changeCredentialsBtn) changeCredentialsBtn.disabled = !this.auth.isAuthenticated;
+        if (logoutBtn) logoutBtn.disabled = !this.auth.isAuthenticated;
+    },
+
+    handleAuthSubmit() {
+        const usernameInput = document.getElementById('auth-username');
+        const passwordInput = document.getElementById('auth-password');
+        if (!usernameInput || !passwordInput) return;
+
+        const username = this.normalizeCredential(usernameInput.value);
+        const password = this.normalizeCredential(passwordInput.value);
+
+        if (!username || !password) {
+            this.showToast('info', 'Introduce usuario y contraseña', 4000);
+            return;
+        }
+
+        if (this.auth.mode === 'setup' || this.auth.mode === 'change') {
+            const successMessage = this.auth.mode === 'setup' ? 'Acceso guardado correctamente' : 'Acceso actualizado';
+            this.auth.credentials = { username, password };
+            this.auth.isAuthenticated = true;
+            this.auth.mode = 'login';
+            this.saveData();
+            this.updateAuthUI();
+            this.showToast('success', successMessage, 4000);
+            usernameInput.value = '';
+            passwordInput.value = '';
+            return;
+        }
+
+        if (username !== this.auth.credentials.username || password !== this.auth.credentials.password) {
+            this.showToast('danger', 'Usuario o contraseña incorrectos', 4000);
+            passwordInput.value = '';
+            passwordInput.focus();
+            return;
+        }
+
+        this.auth.isAuthenticated = true;
+        this.updateAuthUI();
+        this.showToast('success', 'Sesión iniciada', 3000);
+        usernameInput.value = '';
+        passwordInput.value = '';
+    },
+
+    logout() {
+        this.auth.isAuthenticated = false;
+        this.auth.mode = this.hasConfiguredCredentials() ? 'login' : 'setup';
+        this.updateAuthUI();
+        this.showToast('info', 'Sesión cerrada', 3000);
+    },
+
+    openChangeCredentials() {
+        if (!this.auth.isAuthenticated) return;
+        this.auth.mode = 'change';
+        this.auth.isAuthenticated = false;
+        this.updateAuthUI();
+        const usernameInput = document.getElementById('auth-username');
+        if (usernameInput) usernameInput.focus();
     },
 
     // --- Datos facturación ---
@@ -304,6 +490,14 @@ const app = {
 
     // --- Eventos ---
     setupEventListeners() {
+        document.getElementById('auth-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleAuthSubmit();
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => this.logout());
+        document.getElementById('change-credentials-btn').addEventListener('click', () => this.openChangeCredentials());
+
         document.getElementById('aviso-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.addOrUpdateAviso();
