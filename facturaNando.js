@@ -101,6 +101,31 @@ const app = {
         return changed;
     },
 
+    normalizeAvisoImportes() {
+        if (!Array.isArray(this.avisos)) this.avisos = [];
+        let changed = false;
+
+        this.avisos = this.avisos.map((aviso) => {
+            if (!aviso || typeof aviso !== 'object') return aviso;
+
+            const desplazamientoInput = Number(aviso.desplazamientoKm || 0);
+            const importeActual = Number(aviso.importeDesplazamiento || 0);
+            const legacyImporte = parseFloat((desplazamientoInput * 0.30).toFixed(2));
+
+            if (desplazamientoInput > 0 && Math.abs(importeActual - legacyImporte) < 0.001) {
+                changed = true;
+                return {
+                    ...aviso,
+                    importeDesplazamiento: parseFloat(desplazamientoInput.toFixed(2))
+                };
+            }
+
+            return aviso;
+        });
+
+        return changed;
+    },
+
     init: async function() {
         this.loadData();
         this.loadOpciones();
@@ -175,13 +200,14 @@ const app = {
             }
 
             const idsCorregidos = this.ensureUniqueAvisoIds();
+            const importesCorregidos = this.normalizeAvisoImportes();
             this.saveData();
             this.populateSelects();
             this.populateFilterOptions();
             this.renderDatosFacturacionInputs();
             this.displayAvisos();
             this.updateAuthUI();
-            if (idsCorregidos) this.scheduleCloudSave();
+            if (idsCorregidos || importesCorregidos) this.scheduleCloudSave();
         } finally {
             this.isApplyingRemoteState = false;
         }
@@ -236,7 +262,8 @@ const app = {
             const u = localStorage.getItem('ultimoNumeroFactura');
             if (u) this.ultimoNumeroFactura = parseInt(u, 10) || 0;
             const idsCorregidos = this.ensureUniqueAvisoIds();
-            if (idsCorregidos) this.saveData();
+            const importesCorregidos = this.normalizeAvisoImportes();
+            if (idsCorregidos || importesCorregidos) this.saveData();
         } catch (err) {
             console.warn('Error leyendo avisos desde localStorage', err);
             this.avisos = [];
@@ -696,7 +723,7 @@ const app = {
         const nombreCliente = document.getElementById('nombreCliente').value.trim();
         const manoObra = parseFloat(document.getElementById('manoObra').value) || 0;
         const desplazamientoKm = parseFloat(document.getElementById('desplazamientoKm').value) || 0;
-        const importeDesplazamiento = parseFloat((desplazamientoKm * 0.30).toFixed(2));
+        const importeDesplazamiento = parseFloat(desplazamientoKm.toFixed(2));
         const codigoRecambio = document.getElementById('codigoRecambio').value;
         const importeRecambios = parseFloat(document.getElementById('importeRecambios').value) || 0;
         const observaciones = document.getElementById('observacionesAviso').value.trim();
@@ -1212,31 +1239,13 @@ const app = {
         const seleccionados = this.avisos.filter(a => a.seleccionado);
         if (!seleccionados.length) { preview.innerHTML = '<p class="no-seleccion">No hay avisos seleccionados para facturar.</p>'; generarBtn.disabled = true; return; }
 
-        // calculos con 75/25
-        let baseTotal = 0;      // suma de subtotales (100%)
-        let base75Total = 0;    // suma de 75%
-        let base25Total = 0;    // suma de 25%
-
-        seleccionados.forEach(av => {
-            const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
-            baseTotal += subtotal;
-            base75Total += subtotal * 0.75;
-            base25Total += subtotal * 0.25;
-        });
-
-        baseTotal = parseFloat(baseTotal.toFixed(2));
-        base75Total = parseFloat(base75Total.toFixed(2));
-        base25Total = parseFloat(base25Total.toFixed(2));
-
-        const retencion = parseFloat((base75Total * 0.15).toFixed(2)); // 15% sobre 75%
-        const iva = parseFloat((base75Total * 0.21).toFixed(2)); // 21% sobre 75%
-        // total de factura: base75 + iva - retencion + base25 -> corresponde al total facturado al cliente
-        const totalFactura = parseFloat((base75Total + iva - retencion + base25Total).toFixed(2));
+        const { baseTotal, base75Total, base25Total, retencion, iva, totalFactura } = this.calculateFacturaTotals(seleccionados);
 
         preview.innerHTML = `
             <p>Avisos seleccionados: <strong>${seleccionados.length}</strong></p>
-            <p>Base Imponible: <span class="importe-principal">${base75Total.toFixed(2)}€</span></p>
+            <p>Base Imponible (75%): <span class="importe-principal">${base75Total.toFixed(2)}€</span></p>
             <p>Base total (100%): <span class="importe-secundario">${baseTotal.toFixed(2)}€</span></p>
+            <p>Desglose 75/25: <span class="importe-secundario">${base75Total.toFixed(2)}€</span> / <span class="importe-destacado">${base25Total.toFixed(2)}€</span></p>
             <p>Retención (15%): <span class="importe-destacado">-${retencion.toFixed(2)}€</span></p>
             <p>IVA (21%): <span class="importe-secundario">${iva.toFixed(2)}€</span></p>
             <p><strong>Total:</strong> <span class="importe-destacado">${totalFactura.toFixed(2)}€</span></p>
@@ -1274,25 +1283,12 @@ const app = {
         let num = prompt('Introduce número de factura:', defaultNum);
         if (num === null) { this.ultimoNumeroFactura--; return; }
 
-        // cálculos (75/25)
-        let baseTotal = 0, base75Total = 0, base25Total = 0;
         const seleccionadosOrdenados = [...seleccionados].sort((a,b) => {
             const dateA = this.parseAvisoDate(a.fechaAviso);
             const dateB = this.parseAvisoDate(b.fechaAviso);
             return (dateA ? dateA.getTime() : 0) - (dateB ? dateB.getTime() : 0);
         });
-        seleccionadosOrdenados.forEach(av => {
-            const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
-            baseTotal += subtotal;
-            base75Total += subtotal * 0.75;
-            base25Total += subtotal * 0.25;
-        });
-        baseTotal = parseFloat(baseTotal.toFixed(2));
-        base75Total = parseFloat(base75Total.toFixed(2));
-        base25Total = parseFloat(base25Total.toFixed(2));
-        const retencion = parseFloat((base75Total * 0.15).toFixed(2));
-        const iva = parseFloat((base75Total * 0.21).toFixed(2));
-        const totalFactura = parseFloat((base75Total + iva - retencion + base25Total).toFixed(2));
+        const { base75Total, retencion, iva, totalFactura } = this.calculateFacturaTotals(seleccionadosOrdenados);
 
         const em = this.datosFacturacion.emisor;
         const rec = this.datosFacturacion.receptor;
@@ -1375,7 +1371,7 @@ const app = {
             doc.setFont(undefined, 'bold'); doc.setFontSize(11);
             const xFact = right - 260;
 
-            doc.text(`Base imponible:`, xFact, y); doc.text(`${base75Total.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
+            doc.text(`Base imponible (75%):`, xFact, y); doc.text(`${base75Total.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
             doc.text(`Retención (15%):`, xFact, y); doc.text(`-${retencion.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
             doc.text(`IVA (21%):`, xFact, y); doc.text(`${iva.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 20;
 
@@ -1418,6 +1414,29 @@ const app = {
             setTimeout(() => { if (t && t.parentNode) t.parentNode.removeChild(t); }, 300);
         }, duration);
     }
+};
+
+app.calculateFacturaTotals = function(avisos = []) {
+    let baseTotal = 0;
+    let base75Total = 0;
+    let base25Total = 0;
+
+    avisos.forEach(av => {
+        const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
+        baseTotal += subtotal;
+        base75Total += subtotal * 0.75;
+        base25Total += subtotal * 0.25;
+    });
+
+    baseTotal = parseFloat(baseTotal.toFixed(2));
+    base75Total = parseFloat(base75Total.toFixed(2));
+    base25Total = parseFloat(base25Total.toFixed(2));
+
+    const retencion = parseFloat((base75Total * 0.15).toFixed(2));
+    const iva = parseFloat((base75Total * 0.21).toFixed(2));
+    const totalFactura = parseFloat((base75Total - retencion + iva).toFixed(2));
+
+    return { baseTotal, base75Total, base25Total, retencion, iva, totalFactura };
 };
 
 function formatDate(d) {
