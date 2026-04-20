@@ -23,7 +23,8 @@ const app = {
             password: ''
         },
         isAuthenticated: false,
-        mode: 'login'
+        mode: 'login',
+        passwordVisible: false
     },
     opciones: {
         aseguradora: [
@@ -341,8 +342,15 @@ const app = {
         const submit = document.getElementById('auth-submit-btn');
         const usernameInput = document.getElementById('auth-username');
         const passwordInput = document.getElementById('auth-password');
+        const togglePasswordBtn = document.getElementById('toggle-auth-password');
 
-        if (!title || !description || !hint || !submit || !usernameInput || !passwordInput) return;
+        if (!title || !description || !hint || !submit || !usernameInput || !passwordInput || !togglePasswordBtn) return;
+
+        this.auth.passwordVisible = false;
+        passwordInput.type = 'password';
+        togglePasswordBtn.setAttribute('aria-pressed', 'false');
+        togglePasswordBtn.setAttribute('aria-label', 'Mostrar contraseña');
+        togglePasswordBtn.title = 'Mostrar contraseña';
 
         this.syncAuthModeWithStorage();
 
@@ -444,6 +452,19 @@ const app = {
         passwordInput.value = '';
     },
 
+    toggleAuthPasswordVisibility() {
+        const passwordInput = document.getElementById('auth-password');
+        const togglePasswordBtn = document.getElementById('toggle-auth-password');
+        if (!passwordInput || !togglePasswordBtn) return;
+
+        this.auth.passwordVisible = !this.auth.passwordVisible;
+        const isVisible = this.auth.passwordVisible;
+        passwordInput.type = isVisible ? 'text' : 'password';
+        togglePasswordBtn.setAttribute('aria-pressed', String(isVisible));
+        togglePasswordBtn.setAttribute('aria-label', isVisible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        togglePasswordBtn.title = isVisible ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    },
+
     logout() {
         this.auth.isAuthenticated = false;
         this.auth.mode = this.hasConfiguredCredentials() ? 'login' : 'setup';
@@ -521,6 +542,7 @@ const app = {
             e.preventDefault();
             this.handleAuthSubmit();
         });
+        document.getElementById('toggle-auth-password').addEventListener('click', () => this.toggleAuthPasswordVisibility());
 
         document.getElementById('logout-btn').addEventListener('click', () => this.logout());
         document.getElementById('change-credentials-btn').addEventListener('click', () => this.openChangeCredentials());
