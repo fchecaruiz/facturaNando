@@ -63,6 +63,11 @@ const app = {
         }
     },
     ultimoNumeroFactura: 0,
+    facturacionIntegra: {
+        active: false,
+        retencion: 15,
+        iva: 21
+    },
     selectionMode: null,
     activeSelectionFilter: null,
     firebaseReady: false,
@@ -536,6 +541,36 @@ const app = {
         this.showToast('success','Datos guardados correctamente', 4000);
     },
 
+    toggleFacturacionIntegra() {
+        this.facturacionIntegra.active = !this.facturacionIntegra.active;
+        this.syncFacturacionIntegraControls();
+        this.updateFacturaPreview();
+    },
+
+    syncFacturacionIntegraControls() {
+        const toggleBtn = document.getElementById('toggle-facturacion-integra');
+        const panel = document.getElementById('facturacion-integra-panel');
+        const retencionSelect = document.getElementById('facturacion-integra-retencion');
+        const ivaSelect = document.getElementById('facturacion-integra-iva');
+        if (!toggleBtn || !panel || !retencionSelect || !ivaSelect) return;
+
+        retencionSelect.value = String(this.facturacionIntegra.retencion);
+        ivaSelect.value = String(this.facturacionIntegra.iva);
+        panel.classList.toggle('is-hidden', !this.facturacionIntegra.active);
+        toggleBtn.classList.toggle('active', this.facturacionIntegra.active);
+        toggleBtn.textContent = this.facturacionIntegra.active ? 'Volver a 75/25' : 'Facturación íntegra';
+    },
+
+    updateFacturacionIntegraConfig() {
+        const retencionSelect = document.getElementById('facturacion-integra-retencion');
+        const ivaSelect = document.getElementById('facturacion-integra-iva');
+        if (!retencionSelect || !ivaSelect) return;
+
+        this.facturacionIntegra.retencion = parseFloat(retencionSelect.value) || 0;
+        this.facturacionIntegra.iva = parseFloat(ivaSelect.value) || 0;
+        this.updateFacturaPreview();
+    },
+
     // --- Eventos ---
     setupEventListeners() {
         document.getElementById('auth-form').addEventListener('submit', (e) => {
@@ -572,6 +607,9 @@ const app = {
         document.getElementById('sel-month').addEventListener('click', () => this.openSelectionModal('month'));
         document.getElementById('sel-week').addEventListener('click', () => this.openSelectionModal('week'));
         document.getElementById('sel-year').addEventListener('click', () => this.openSelectionModal('year'));
+        document.getElementById('toggle-facturacion-integra').addEventListener('click', () => this.toggleFacturacionIntegra());
+        document.getElementById('facturacion-integra-retencion').addEventListener('change', () => this.updateFacturacionIntegraConfig());
+        document.getElementById('facturacion-integra-iva').addEventListener('change', () => this.updateFacturacionIntegraConfig());
 
         document.getElementById('avisos-list').addEventListener('change', (e) => {
             if (e.target && e.target.classList.contains('aviso-checkbox')) {
@@ -1259,17 +1297,20 @@ const app = {
         const preview = document.getElementById('factura-preview');
         const generarBtn = document.getElementById('generar-factura-pdf');
         const seleccionados = this.avisos.filter(a => a.seleccionado);
+        this.syncFacturacionIntegraControls();
         if (!seleccionados.length) { preview.innerHTML = '<p class="no-seleccion">No hay avisos seleccionados para facturar.</p>'; generarBtn.disabled = true; return; }
 
-        const { baseTotal, base75Total, base25Total, retencion, iva, totalFactura } = this.calculateFacturaTotals(seleccionados);
+        const calculo = this.calculateFacturaTotals(seleccionados);
+        const { modeLabel, baseTotal, base75Total, base25Total, baseImponible, retencion, iva, totalFactura, retencionRate, ivaRate, showBreakdown } = calculo;
 
         preview.innerHTML = `
             <p>Avisos seleccionados: <strong>${seleccionados.length}</strong></p>
-            <p>Base Imponible (75%): <span class="importe-principal">${base75Total.toFixed(2)}€</span></p>
+            <p>Modo: <strong>${modeLabel}</strong></p>
+            <p>Base Imponible: <span class="importe-principal">${baseImponible.toFixed(2)}€</span></p>
             <p>Base total (100%): <span class="importe-secundario">${baseTotal.toFixed(2)}€</span></p>
-            <p>Desglose 75/25: <span class="importe-secundario">${base75Total.toFixed(2)}€</span> / <span class="importe-destacado">${base25Total.toFixed(2)}€</span></p>
-            <p>Retención (15%): <span class="importe-destacado">-${retencion.toFixed(2)}€</span></p>
-            <p>IVA (21%): <span class="importe-secundario">${iva.toFixed(2)}€</span></p>
+            ${showBreakdown ? `<p>Desglose 75/25: <span class="importe-secundario">${base75Total.toFixed(2)}€</span> / <span class="importe-destacado">${base25Total.toFixed(2)}€</span></p>` : ''}
+            <p>Retención (${retencionRate}%): <span class="importe-destacado">-${retencion.toFixed(2)}€</span></p>
+            <p>IVA (${ivaRate}%): <span class="importe-secundario">${iva.toFixed(2)}€</span></p>
             <p><strong>Total:</strong> <span class="importe-destacado">${totalFactura.toFixed(2)}€</span></p>
             <hr>
             <h5>Detalle de avisos</h5>
@@ -1277,7 +1318,7 @@ const app = {
                 ${seleccionados.map(av=>{
                     const subtotal = ((av.manoObra||0)+(av.importeDesplazamiento||0)+(av.importeRecambios||0)).toFixed(2);
                     const b75 = (parseFloat(subtotal) * 0.75).toFixed(2);
-                    return `<li>Nº ${av.numeroAviso} — ${av.fechaAviso || ''} — Subtotal ${subtotal}€ — 75%: ${b75}€</li>`;
+                    return `<li>Nº ${av.numeroAviso} — ${av.fechaAviso || ''} — Subtotal ${subtotal}€${showBreakdown ? ` — 75%: ${b75}€` : ''}</li>`;
                 }).join('')}
             </ul>
         `;
@@ -1310,7 +1351,8 @@ const app = {
             const dateB = this.parseAvisoDate(b.fechaAviso);
             return (dateA ? dateA.getTime() : 0) - (dateB ? dateB.getTime() : 0);
         });
-        const { base75Total, retencion, iva, totalFactura } = this.calculateFacturaTotals(seleccionadosOrdenados);
+        const calculo = this.calculateFacturaTotals(seleccionadosOrdenados);
+        const { modeLabel, baseImponible, retencion, iva, totalFactura, retencionRate, ivaRate, showBreakdown } = calculo;
 
         const em = this.datosFacturacion.emisor;
         const rec = this.datosFacturacion.receptor;
@@ -1372,6 +1414,7 @@ const app = {
                 if (y > doc.internal.pageSize.height - 120) { doc.addPage(); y = 80; }
                 const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
                 const b75 = parseFloat((subtotal * 0.75).toFixed(2));
+                const baseLinea = showBreakdown ? b75 : subtotal;
 
                 const numAvisoTxt = doc.splitTextToSize(av.numeroAviso || '', 80);
                 const asegTxt = doc.splitTextToSize(av.aseguradora || '', 120);
@@ -1381,7 +1424,7 @@ const app = {
                 doc.text(av.fechaAviso || '', left + 110, y);
                 doc.text(asegTxt, left + 170, y);
                 doc.text(conceptoTxt, left + 300, y);
-                doc.text(`${b75.toFixed(2)}€`, right - 8, y, { align: 'right' });
+                doc.text(`${baseLinea.toFixed(2)}€`, right - 8, y, { align: 'right' });
 
                 const lines = Math.max(numAvisoTxt.length, asegTxt.length, conceptoTxt.length);
                 y += (lines * 12) + 8;
@@ -1393,9 +1436,10 @@ const app = {
             doc.setFont(undefined, 'bold'); doc.setFontSize(11);
             const xFact = right - 260;
 
-            doc.text(`Base imponible (75%):`, xFact, y); doc.text(`${base75Total.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
-            doc.text(`Retención (15%):`, xFact, y); doc.text(`-${retencion.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
-            doc.text(`IVA (21%):`, xFact, y); doc.text(`${iva.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 20;
+            doc.text(`Modo: ${modeLabel}`, xFact, y); y += 16;
+            doc.text(`Base imponible:`, xFact, y); doc.text(`${baseImponible.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
+            doc.text(`Retención (${retencionRate}%):`, xFact, y); doc.text(`-${retencion.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
+            doc.text(`IVA (${ivaRate}%):`, xFact, y); doc.text(`${iva.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 20;
 
             doc.setFontSize(13);
             doc.text(`TOTAL:`, xFact, y); doc.text(`${totalFactura.toFixed(2)}€`, right - 8, y, { align:'right' });
@@ -1454,11 +1498,49 @@ app.calculateFacturaTotals = function(avisos = []) {
     base75Total = parseFloat(base75Total.toFixed(2));
     base25Total = parseFloat(base25Total.toFixed(2));
 
-    const retencion = parseFloat((base75Total * 0.15).toFixed(2));
-    const iva = parseFloat((base75Total * 0.21).toFixed(2));
-    const totalFactura = parseFloat((base75Total - retencion + iva).toFixed(2));
+    if (this.facturacionIntegra.active) {
+        const retencionRate = this.facturacionIntegra.retencion;
+        const ivaRate = this.facturacionIntegra.iva;
+        const baseImponible = baseTotal;
+        const retencion = parseFloat((baseImponible * (retencionRate / 100)).toFixed(2));
+        const iva = parseFloat((baseImponible * (ivaRate / 100)).toFixed(2));
+        const totalFactura = parseFloat((baseImponible - retencion + iva).toFixed(2));
 
-    return { baseTotal, base75Total, base25Total, retencion, iva, totalFactura };
+        return {
+            modeLabel: 'Facturación íntegra',
+            baseTotal,
+            base75Total,
+            base25Total,
+            baseImponible,
+            retencion,
+            iva,
+            totalFactura,
+            retencionRate,
+            ivaRate,
+            showBreakdown: false
+        };
+    }
+
+    const retencionRate = 15;
+    const ivaRate = 21;
+    const baseImponible = base75Total;
+    const retencion = parseFloat((baseImponible * (retencionRate / 100)).toFixed(2));
+    const iva = parseFloat((baseImponible * (ivaRate / 100)).toFixed(2));
+    const totalFactura = parseFloat((baseImponible - retencion + iva).toFixed(2));
+
+    return {
+        modeLabel: 'Reparto 75/25',
+        baseTotal,
+        base75Total,
+        base25Total,
+        baseImponible,
+        retencion,
+        iva,
+        totalFactura,
+        retencionRate,
+        ivaRate,
+        showBreakdown: true
+    };
 };
 
 function formatDate(d) {

@@ -145,6 +145,24 @@
 
     <div class="card">
       <h4>Preview factura</h4>
+      <div class="facturacion-mode-bar">
+        <button id="toggle-facturacion-integra" type="button" class="manage-btn">Facturación íntegra</button>
+        <div id="facturacion-integra-panel" class="facturacion-integra-panel is-hidden">
+          <label for="facturacion-integra-retencion">Retención</label>
+          <select id="facturacion-integra-retencion">
+            <option value="0">0%</option>
+            <option value="7">7%</option>
+            <option value="15" selected>15%</option>
+            <option value="19">19%</option>
+          </select>
+          <label for="facturacion-integra-iva">IVA</label>
+          <select id="facturacion-integra-iva">
+            <option value="4">4%</option>
+            <option value="10">10%</option>
+            <option value="21" selected>21%</option>
+          </select>
+        </div>
+      </div>
       <div id="factura-preview"></div>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px;">
         <button id="generar-factura-pdf" class="btn-pdf">Generar Factura en PDF</button>

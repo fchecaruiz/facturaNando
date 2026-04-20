@@ -138,6 +138,10 @@ body.auth-pending .app-shell{
   margin:12px 0 0;
 }
 
+.is-hidden{
+  display:none;
+}
+
 .container{
   max-width:1200px; margin:0 auto;
   padding:22px; border-radius:12px;
@@ -294,6 +298,40 @@ button:active{ transform:scale(0.98); }
 .bulk-actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
 .bulk-actions button{ background: linear-gradient(90deg,#163a5b,#2b6fb8); color:#fff; }
 
+.facturacion-mode-bar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:end;
+  margin-bottom:12px;
+}
+
+#toggle-facturacion-integra.active{
+  background: linear-gradient(90deg,#ffb703,#fb8500);
+  color:#021425;
+}
+
+.facturacion-integra-panel{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:end;
+  padding:10px 12px;
+  border-radius:10px;
+  background: linear-gradient(90deg, rgba(255,183,3,0.18), rgba(251,133,0,0.14));
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.facturacion-integra-panel label{
+  margin:0;
+}
+
+.facturacion-integra-panel select{
+  width:auto;
+  min-width:92px;
+  margin-bottom:0;
+}
+
 /* Resumen de avisos */
 .avisos-summary{
   display:flex;
@@ -425,6 +463,9 @@ button:active{ transform:scale(0.98); }
   .aviso-item{ flex-direction:column; align-items:flex-start; }
   .filter-controls{ gap:6px; }
   .bulk-actions{ gap:6px; }
+  .facturacion-mode-bar{ flex-direction:column; align-items:stretch; }
+  .facturacion-integra-panel{ flex-direction:column; align-items:stretch; }
+  .facturacion-integra-panel select{ width:100%; }
   .logo-wrap{ justify-content:center; }
   .app-logo{ width:min(260px, 78vw); }
   .top-actions{ flex-direction:column; align-items:stretch; }
