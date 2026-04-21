@@ -52,23 +52,31 @@
           <div>
             <label for="numeroAviso">Nº Aviso</label>
             <input id="numeroAviso" type="text" placeholder="Ej: 1000001" />
+
             <label for="fechaAviso">Fecha</label>
             <div class="date-field">
               <input id="fechaAviso" type="date" />
               <button type="button" id="open-date-picker" class="date-picker-btn" aria-label="Abrir calendario">Cal</button>
             </div>
+          </div>
+
+          <div>
             <label for="aseguradora">Aseguradora o Marcas </label>
             <div class="select-container">
               <select id="aseguradora"></select>
               <button type="button" id="manage-aseg-btn" class="manage-btn">Gestionar</button>
             </div>
-          </div>
-          <div>
+
             <label for="marca">Marca</label>
             <div class="select-container">
               <select id="marca"></select>
               <button type="button" id="manage-marca-btn" class="manage-btn">Gestionar</button>
             </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
 
             <label for="tipoAparato">Tipo de Aparato</label>
             <div class="select-container">
@@ -78,10 +86,15 @@
 
             <label for="nombreCliente">Nombre Cliente (opcional)</label>
             <input id="nombreCliente" type="text" placeholder="Ej: Juan Perez" />
+          </div>
+
+          <div>
+
+            <label for="localidadAviso">Localidad (opcional)</label>
+            <input id="localidadAviso" type="text" placeholder="Ej: Agreda" />
 
             <label for="codigoRecambio">Código Recambio (opcional)</label>
             <input id="codigoRecambio" type="text" />
-
           </div>
         </div>
 
@@ -108,7 +121,7 @@
 
     <div class="card">
       <div class="search-row">
-        <input id="buscadorAvisos" type="text" placeholder="Buscar por cualquier texto: aviso, aparato, marca, cliente, aseguradora, observaciones..." />
+        <input id="buscadorAvisos" type="text" placeholder="Buscar por cualquier texto: aviso, aparato, marca, cliente, localidad, aseguradora, observaciones..." />
         <button id="limpiar-busqueda" class="manage-btn">Limpiar</button>
       </div>
 

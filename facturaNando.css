@@ -555,9 +555,36 @@ button:active{ transform:scale(0.98); }
 .toast.success{ background: linear-gradient(90deg,#b9ffb9,#00e676); color:#021425; }
 .toast.info{ background: linear-gradient(90deg,#74c0fc,#4ecdc4); color:#021425; }
 .toast.danger{ background: linear-gradient(90deg,#ff9b9b,#ff3b30); color:#fff; }
+.toast.toast-critical{
+  position:fixed;
+  top:50%;
+  left:50%;
+  right:auto;
+  width:min(92vw, 560px);
+  max-width:none;
+  margin:0;
+  padding:22px 28px;
+  border-radius:16px;
+  text-align:center;
+  font-size:1.35rem;
+  line-height:1.25;
+  letter-spacing:0.02em;
+  box-shadow:0 22px 60px rgba(0,0,0,0.45);
+  border:2px solid rgba(255,255,255,0.18);
+  transform:translate(-50%, calc(-50% + 18px)) scale(0.98);
+}
+
+.toast.toast-critical.show{
+  transform:translate(-50%, -50%) scale(1);
+}
 
 /* Responsive */
 @media (max-width:800px){
+  .toast.toast-critical{
+    width:min(92vw, 420px);
+    padding:18px 20px;
+    font-size:1.1rem;
+  }
   .grid-2{ grid-template-columns:1fr; }
   .select-container{ flex-direction:column; align-items:stretch; }
   .aviso-item{ flex-direction:column; align-items:flex-start; }

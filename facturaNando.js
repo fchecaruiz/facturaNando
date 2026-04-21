@@ -1138,6 +1138,7 @@ const app = {
         const marca = document.getElementById('marca').value;
         const tipoAparato = document.getElementById('tipoAparato').value;
         const nombreCliente = document.getElementById('nombreCliente').value.trim();
+        const localidad = document.getElementById('localidadAviso').value.trim();
         const manoObra = parseFloat(document.getElementById('manoObra').value) || 0;
         const desplazamientoKm = parseFloat(document.getElementById('desplazamientoKm').value) || 0;
         const importeDesplazamiento = parseFloat(desplazamientoKm.toFixed(2));
@@ -1147,19 +1148,19 @@ const app = {
 
         if (!numeroAviso) { this.showToast('info','Introduce número de aviso', 4000); return; }
 
-        if (!editId && this.avisos.some(a=>a.numeroAviso === numeroAviso)) { this.showToast('danger','Número de aviso duplicado', 4000); return; }
+        if (!editId && this.avisos.some(a=>a.numeroAviso === numeroAviso)) { this.showToast('danger','Número de aviso duplicado', 4500, 'toast-critical'); return; }
 
         if (editId) {
             const idx = this.avisos.findIndex(a=>String(a.id)===String(editId));
             if (idx===-1) { this.showToast('danger','Aviso no encontrado para actualizar', 4000); return; }
             // Preserve cerrado / seleccionado states
             const preserved = { cerrado: this.avisos[idx].cerrado || false, seleccionado: this.avisos[idx].seleccionado || false };
-            this.avisos[idx] = { ...this.avisos[idx], numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, ...preserved };
+            this.avisos[idx] = { ...this.avisos[idx], numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, localidad, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, ...preserved };
             delete form.dataset.editId;
             document.getElementById('guardar-aviso-btn').textContent = 'Guardar Aviso';
             this.showToast('info','Aviso actualizado', 4000);
         } else {
-            const nuevo = { id: this.createUniqueAvisoId(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, seleccionado:false, cerrado:false };
+            const nuevo = { id: this.createUniqueAvisoId(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, localidad, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, seleccionado:false, cerrado:false };
             this.avisos.push(nuevo);
             this.showToast('success','Aviso registrado', 4000);
         }
@@ -1200,6 +1201,7 @@ const app = {
         document.getElementById('marca').value = avis.marca;
         document.getElementById('tipoAparato').value = avis.tipoAparato;
         document.getElementById('nombreCliente').value = avis.nombreCliente || '';
+        document.getElementById('localidadAviso').value = avis.localidad || '';
         document.getElementById('manoObra').value = avis.manoObra;
         document.getElementById('desplazamientoKm').value = avis.desplazamientoKm;
         document.getElementById('codigoRecambio').value = avis.codigoRecambio;
@@ -1278,7 +1280,7 @@ const app = {
                     <div style="display:inline-block; margin-left:8px;">
                         <strong>Nº Aviso:</strong> ${this.escapeHtml(av.numeroAviso || '')}<br>
                         <small><strong>Fecha:</strong> ${this.escapeHtml(av.fechaAviso || '')} — <strong>Aseg:</strong> ${this.escapeHtml(av.aseguradora || '')} — <strong>Marca:</strong> ${this.escapeHtml(av.marca || '')}</small><br>
-                        <small><strong>Tipo:</strong> ${this.escapeHtml(av.tipoAparato || '')} — <strong>Cliente:</strong> ${this.escapeHtml(av.nombreCliente || '')}</small><br>
+                        <small><strong>Tipo:</strong> ${this.escapeHtml(av.tipoAparato || '')} — <strong>Cliente:</strong> ${this.escapeHtml(av.nombreCliente || '')} — <strong>Localidad:</strong> ${this.escapeHtml(av.localidad || '')}</small><br>
                         ${observaciones ? `<small><strong>Observaciones:</strong> ${observaciones}</small><br>` : ''}
                         <small><strong>Subtotal:</strong> <span class="importe-principal">${subtotal.toFixed(2)}€</span> | <strong>75%:</strong> <span class="importe-secundario">${base75.toFixed(2)}€</span> | <strong>25%:</strong> <span class="importe-destacado">${base25.toFixed(2)}€</span></small>
                     </div>
@@ -1328,6 +1330,7 @@ const app = {
             aviso.marca,
             aviso.tipoAparato,
             aviso.nombreCliente,
+            aviso.localidad,
             aviso.codigoRecambio,
             aviso.observaciones,
             aviso.manoObra,
@@ -1863,11 +1866,11 @@ const app = {
         this.showToast('success', 'Numeración reiniciada. La siguiente factura será FAC-0001.', 4500);
     },
 
-    showToast(type = 'info', message = '', duration = 4000) {
+    showToast(type = 'info', message = '', duration = 4000, extraClass = '') {
         const container = document.getElementById('toast-container');
         if (!container) return;
         const t = document.createElement('div');
-        t.className = `toast ${type}`;
+        t.className = `toast ${type}${extraClass ? ` ${extraClass}` : ''}`;
         t.textContent = message;
         container.appendChild(t);
         // for CSS animation
