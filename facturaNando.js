@@ -369,6 +369,8 @@ const app = {
 
     renderFacturasEmitidas() {
         const container = document.getElementById('facturas-history-list');
+        const searchInput = document.getElementById('facturas-history-search');
+        const statusFilter = document.getElementById('facturas-history-status-filter');
         if (!container) return;
 
         if (!Array.isArray(this.facturasEmitidas) || !this.facturasEmitidas.length) {
@@ -376,7 +378,24 @@ const app = {
             return;
         }
 
-        const facturasOrdenadas = [...this.facturasEmitidas].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const searchTerm = String(searchInput?.value || '').trim().toLowerCase();
+        const selectedStatus = String(statusFilter?.value || '').trim().toLowerCase();
+
+        const facturasOrdenadas = [...this.facturasEmitidas]
+            .filter((factura) => {
+                const matchesSearch = !searchTerm || [factura.numeroFactura, factura.receptorNombre]
+                    .filter(Boolean)
+                    .some((value) => String(value).toLowerCase().includes(searchTerm));
+                const matchesStatus = !selectedStatus || String(factura.estadoCobro || '').toLowerCase() === selectedStatus;
+                return matchesSearch && matchesStatus;
+            })
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        if (!facturasOrdenadas.length) {
+            container.innerHTML = '<p class="factura-history-empty">No hay facturas que coincidan con el filtro actual.</p>';
+            return;
+        }
+
         container.innerHTML = facturasOrdenadas.map((factura) => `
             <div class="factura-history-item">
                 <div>
@@ -946,6 +965,8 @@ const app = {
                 this.updateEstadoCobroFactura(statusSelect.dataset.id, statusSelect.value);
             }
         });
+        document.getElementById('facturas-history-search').addEventListener('input', () => this.renderFacturasEmitidas());
+        document.getElementById('facturas-history-status-filter').addEventListener('change', () => this.renderFacturasEmitidas());
 
         document.getElementById('avisos-list').addEventListener('change', (e) => {
             if (e.target && e.target.classList.contains('aviso-checkbox')) {

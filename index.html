@@ -242,6 +242,15 @@
 
     <div class="card">
       <h4>Historial de facturas emitidas</h4>
+      <div class="factura-history-filters">
+        <input id="facturas-history-search" type="text" placeholder="Buscar por número o cliente" />
+        <select id="facturas-history-status-filter">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="cobrada">Cobradas</option>
+          <option value="anulada">Anuladas</option>
+        </select>
+      </div>
       <div id="facturas-history-list"></div>
     </div>
 

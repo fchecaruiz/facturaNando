@@ -386,6 +386,24 @@ button:active{ transform:scale(0.98); }
   margin-bottom:10px;
 }
 
+.factura-history-filters{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+.factura-history-filters input{
+  flex:1;
+  min-width:220px;
+}
+
+.factura-history-filters select{
+  width:auto;
+  min-width:180px;
+  margin-bottom:0;
+}
+
 .factura-history-item strong{
   color:var(--rojo-visible);
 }
@@ -546,6 +564,9 @@ button:active{ transform:scale(0.98); }
   .factura-history-item{ flex-direction:column; }
   .factura-history-total{ text-align:left; min-width:0; }
   .factura-history-actions{ justify-content:flex-start; flex-wrap:wrap; }
+  .factura-history-filters{ flex-direction:column; }
+  .factura-history-filters input,
+  .factura-history-filters select{ width:100%; min-width:0; }
   .filter-controls{ gap:6px; }
   .bulk-actions{ gap:6px; }
   .facturacion-mode-bar{ flex-direction:column; align-items:stretch; }
