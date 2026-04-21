@@ -169,6 +169,29 @@
         <button id="guardar-datos-btn">Guardar Datos de Facturación</button>
         <button id="reset-factura-num" class="manage-btn" type="button">Reiniciar Nº de Factura</button>
       </div>
+      <div class="billing-section bank-account-box">
+        <h5>Cuentas bancarias para imprimir</h5>
+        <div class="grid-2">
+          <div>
+            <label for="cuenta-bancaria-seleccionada">Cuenta activa en factura</label>
+            <select id="cuenta-bancaria-seleccionada"></select>
+          </div>
+          <div class="bank-account-actions">
+            <button id="eliminar-cuenta-bancaria" type="button" class="delete-btn-small">Eliminar cuenta seleccionada</button>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label for="nuevo-banco-emisor">Banco</label>
+            <input id="nuevo-banco-emisor" type="text" placeholder="Ej: Ibercaja" />
+          </div>
+          <div>
+            <label for="nueva-cuenta-emisor">Número de cuenta</label>
+            <input id="nueva-cuenta-emisor" type="text" placeholder="Ej: ES71 2085 9611 10 0300041000" />
+          </div>
+        </div>
+        <button id="add-cuenta-bancaria" type="button" class="manage-btn">Guardar cuenta bancaria</button>
+      </div>
     </div>
 
     <div class="card billing-card">
@@ -215,6 +238,11 @@
           <input id="receptorTelf" type="text" />
         </div>
       </div>
+    </div>
+
+    <div class="card">
+      <h4>Historial de facturas emitidas</h4>
+      <div id="facturas-history-list"></div>
     </div>
 
   </div>

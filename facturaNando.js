@@ -17,6 +17,7 @@ const firestoreDb = getFirestore(firebaseWebApp);
 
 const app = {
     avisos: [],
+    facturasEmitidas: [],
     auth: {
         credentials: {
             username: '',
@@ -48,10 +49,18 @@ const app = {
             direccion: "C/ REYES CATOLICOS Nº 1",
             localidad: "42110 OLVEGA (SORIA)",
             dni: "16.807.738-M",
-            telf: "68-29-64-59",
+            telf: "618-29-64-59",
             email: "fchecaruiz@gmail.com",
             cuenta: "ES71 2085 9611 10 0300041000",
-            banco: "IBERCAJA"
+            banco: "IBERCAJA",
+            cuentasBancarias: [
+                {
+                    id: 'cta-default',
+                    banco: 'IBERCAJA',
+                    cuenta: 'ES71 2085 9611 10 0300041000'
+                }
+            ],
+            selectedCuentaBancariaId: 'cta-default'
         },
         receptor: {
             nombre: "REPARACIONES TECNICAS DUERO S.L.U.",
@@ -79,6 +88,14 @@ const app = {
     createUniqueAvisoId() {
         // IDs estables y únicos para evitar colisiones al alternar cerrado/abierto.
         return `av-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    },
+
+    createCuentaBancariaId() {
+        return `cta-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    },
+
+    createFacturaEmitidaId() {
+        return `fac-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     },
 
     ensureUniqueAvisoIds() {
@@ -132,6 +149,31 @@ const app = {
         return changed;
     },
 
+    normalizeFacturasEmitidas() {
+        if (!Array.isArray(this.facturasEmitidas)) this.facturasEmitidas = [];
+        let changed = false;
+
+        this.facturasEmitidas = this.facturasEmitidas.map((factura) => {
+            if (!factura || typeof factura !== 'object') return factura;
+            const nextFactura = { ...factura };
+
+            if (!nextFactura.id) {
+                nextFactura.id = this.createFacturaEmitidaId();
+                nextFactura.createdAt = nextFactura.createdAt || Date.now();
+                changed = true;
+            }
+
+            if (!nextFactura.estadoCobro) {
+                nextFactura.estadoCobro = 'pendiente';
+                changed = true;
+            }
+
+            return nextFactura;
+        });
+
+        return changed;
+    },
+
     init: async function() {
         this.loadData();
         this.loadOpciones();
@@ -141,6 +183,7 @@ const app = {
         this.populateFilterOptions();
         this.setupEventListeners();
         this.displayAvisos();
+        this.renderFacturasEmitidas();
         this.updateAuthUI();
         await this.initFirebaseRealtime();
         this.updateAuthUI();
@@ -149,6 +192,7 @@ const app = {
     getSharedStatePayload() {
         return {
             avisos: Array.isArray(this.avisos) ? this.avisos : [],
+            facturasEmitidas: Array.isArray(this.facturasEmitidas) ? this.facturasEmitidas : [],
             opciones: {
                 aseguradora: Array.isArray(this.opciones?.aseguradora) ? this.opciones.aseguradora : [],
                 marca: Array.isArray(this.opciones?.marca) ? this.opciones.marca : [],
@@ -175,6 +219,10 @@ const app = {
                 this.avisos = state.avisos;
             }
 
+            if (Array.isArray(state.facturasEmitidas)) {
+                this.facturasEmitidas = state.facturasEmitidas;
+            }
+
             if (state.opciones && typeof state.opciones === 'object') {
                 this.opciones = {
                     aseguradora: Array.isArray(state.opciones.aseguradora) ? state.opciones.aseguradora : this.opciones.aseguradora,
@@ -192,6 +240,7 @@ const app = {
                     emisor: { ...this.datosFacturacion.emisor, ...(state.datosFacturacion.emisor || {}) },
                     receptor: { ...this.datosFacturacion.receptor, ...(state.datosFacturacion.receptor || {}) }
                 };
+                this.normalizeDatosFacturacion();
             }
 
             if (state.auth && typeof state.auth === 'object' && state.auth.credentials) {
@@ -207,13 +256,15 @@ const app = {
 
             const idsCorregidos = this.ensureUniqueAvisoIds();
             const importesCorregidos = this.normalizeAvisoImportes();
+            const facturasCorregidas = this.normalizeFacturasEmitidas();
             this.saveData();
             this.populateSelects();
             this.populateFilterOptions();
             this.renderDatosFacturacionInputs();
             this.displayAvisos();
+            this.renderFacturasEmitidas();
             this.updateAuthUI();
-            if (idsCorregidos || importesCorregidos) this.scheduleCloudSave();
+            if (idsCorregidos || importesCorregidos || facturasCorregidas) this.scheduleCloudSave();
         } finally {
             this.isApplyingRemoteState = false;
         }
@@ -265,11 +316,14 @@ const app = {
         try {
             const s = localStorage.getItem('facturaNandoAvisos');
             if (s) this.avisos = JSON.parse(s);
+            const f = localStorage.getItem('facturaNandoFacturasEmitidas');
+            if (f) this.facturasEmitidas = JSON.parse(f);
             const u = localStorage.getItem('ultimoNumeroFactura');
             if (u) this.ultimoNumeroFactura = parseInt(u, 10) || 0;
             const idsCorregidos = this.ensureUniqueAvisoIds();
             const importesCorregidos = this.normalizeAvisoImportes();
-            if (idsCorregidos || importesCorregidos) this.saveData();
+            const facturasCorregidas = this.normalizeFacturasEmitidas();
+            if (idsCorregidos || importesCorregidos || facturasCorregidas) this.saveData();
         } catch (err) {
             console.warn('Error leyendo avisos desde localStorage', err);
             this.avisos = [];
@@ -312,9 +366,113 @@ const app = {
 
         this.syncAuthModeWithStorage();
     },
+
+    renderFacturasEmitidas() {
+        const container = document.getElementById('facturas-history-list');
+        if (!container) return;
+
+        if (!Array.isArray(this.facturasEmitidas) || !this.facturasEmitidas.length) {
+            container.innerHTML = '<p class="factura-history-empty">Todavía no hay facturas emitidas registradas.</p>';
+            return;
+        }
+
+        const facturasOrdenadas = [...this.facturasEmitidas].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        container.innerHTML = facturasOrdenadas.map((factura) => `
+            <div class="factura-history-item">
+                <div>
+                    <strong>${this.escapeHtml(factura.numeroFactura || '')}</strong>
+                    <small>Fecha: ${this.escapeHtml(factura.fecha || '')}</small>
+                    <small>Cliente: ${this.escapeHtml(factura.receptorNombre || '')}</small>
+                    <small>Modo: ${this.escapeHtml(factura.modeLabel || '')}</small>
+                    <small>Avisos: ${Array.isArray(factura.avisos) ? factura.avisos.map((aviso) => this.escapeHtml(aviso)).join(', ') : ''}</small>
+                    <small>Banco: ${this.escapeHtml(factura.banco || '')}</small>
+                    <small>Estado de cobro: <span class="factura-history-status ${this.escapeHtml(factura.estadoCobro || 'pendiente')}">${this.escapeHtml(factura.estadoCobro || 'pendiente')}</span></small>
+                </div>
+                <div class="factura-history-total">
+                    <small>Base: <span class="importe-principal">${Number(factura.baseImponible || 0).toFixed(2)}€</span></small>
+                    <small>IVA: <span class="importe-secundario">${Number(factura.iva || 0).toFixed(2)}€</span></small>
+                    <small>Ret.: <span class="importe-destacado">-${Number(factura.retencion || 0).toFixed(2)}€</span></small>
+                    <strong>Total: ${Number(factura.total || 0).toFixed(2)}€</strong>
+                    <select class="factura-history-status-select" data-id="${this.escapeHtml(factura.id || '')}">
+                        <option value="pendiente" ${factura.estadoCobro === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+                        <option value="cobrada" ${factura.estadoCobro === 'cobrada' ? 'selected' : ''}>Cobrada</option>
+                        <option value="anulada" ${factura.estadoCobro === 'anulada' ? 'selected' : ''}>Anulada</option>
+                    </select>
+                    <div class="factura-history-actions">
+                        <button type="button" class="edit-btn-small factura-history-edit" data-id="${this.escapeHtml(factura.id || '')}">Editar</button>
+                        <button type="button" class="delete-btn-small factura-history-delete" data-id="${this.escapeHtml(factura.id || '')}">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    editFacturaEmitida(id) {
+        const idx = this.facturasEmitidas.findIndex((factura) => String(factura.id) === String(id));
+        if (idx === -1) return;
+
+        const actual = this.facturasEmitidas[idx];
+        const numeroFactura = prompt('Número de factura:', actual.numeroFactura || '');
+        if (numeroFactura === null) return;
+        const fecha = prompt('Fecha:', actual.fecha || '');
+        if (fecha === null) return;
+        const receptorNombre = prompt('Cliente:', actual.receptorNombre || '');
+        if (receptorNombre === null) return;
+        const banco = prompt('Banco:', actual.banco || '');
+        if (banco === null) return;
+
+        this.facturasEmitidas[idx] = {
+            ...actual,
+            numeroFactura: numeroFactura.trim(),
+            fecha: fecha.trim(),
+            receptorNombre: receptorNombre.trim(),
+            banco: banco.trim()
+        };
+        this.saveData();
+        this.renderFacturasEmitidas();
+        this.showToast('success', 'Factura del historial actualizada', 4000);
+    },
+
+    deleteFacturaEmitida(id) {
+        const idx = this.facturasEmitidas.findIndex((factura) => String(factura.id) === String(id));
+        if (idx === -1) return;
+        if (!confirm('¿Eliminar esta factura del historial?')) return;
+
+        this.facturasEmitidas.splice(idx, 1);
+        this.saveData();
+        this.renderFacturasEmitidas();
+        this.showToast('success', 'Factura eliminada del historial', 4000);
+    },
+
+    updateEstadoCobroFactura(id, estadoCobro) {
+        const idx = this.facturasEmitidas.findIndex((factura) => String(factura.id) === String(id));
+        if (idx === -1) return;
+
+        this.facturasEmitidas[idx] = {
+            ...this.facturasEmitidas[idx],
+            estadoCobro: estadoCobro || 'pendiente'
+        };
+        this.saveData();
+        this.renderFacturasEmitidas();
+    },
+
+    registerFacturaEmitida(payload) {
+        if (!payload || typeof payload !== 'object') return;
+        this.facturasEmitidas = Array.isArray(this.facturasEmitidas) ? this.facturasEmitidas : [];
+        this.facturasEmitidas.push({
+            id: this.createFacturaEmitidaId(),
+            ...payload,
+            estadoCobro: payload.estadoCobro || 'pendiente',
+            createdAt: Date.now()
+        });
+        this.saveData();
+        this.renderFacturasEmitidas();
+    },
+
     saveData() {
         try {
             localStorage.setItem('facturaNandoAvisos', JSON.stringify(this.avisos));
+            localStorage.setItem('facturaNandoFacturasEmitidas', JSON.stringify(this.facturasEmitidas));
             localStorage.setItem('facturaNandoOpciones', JSON.stringify(this.opciones));
             localStorage.setItem('ultimoNumeroFactura', String(this.ultimoNumeroFactura));
             localStorage.setItem('datosEmisor', JSON.stringify(this.datosFacturacion.emisor));
@@ -497,19 +655,90 @@ const app = {
             console.warn('Error cargando datos de facturación', err);
         }
 
+        this.normalizeDatosFacturacion();
         this.renderDatosFacturacionInputs();
+    },
+
+    normalizeDatosFacturacion() {
+        const emisor = this.datosFacturacion.emisor || {};
+        let cuentasBancarias = Array.isArray(emisor.cuentasBancarias)
+            ? emisor.cuentasBancarias.map((cuenta) => ({
+                id: cuenta?.id || this.createCuentaBancariaId(),
+                banco: String(cuenta?.banco || '').trim(),
+                cuenta: String(cuenta?.cuenta || '').trim()
+            }))
+            : [];
+
+        if (!cuentasBancarias.length && (emisor.banco || emisor.cuenta)) {
+            cuentasBancarias = [{
+                id: this.createCuentaBancariaId(),
+                banco: String(emisor.banco || '').trim(),
+                cuenta: String(emisor.cuenta || '').trim()
+            }];
+        }
+
+        cuentasBancarias = cuentasBancarias.filter((cuenta) => cuenta.banco || cuenta.cuenta);
+
+        let selectedCuentaBancariaId = emisor.selectedCuentaBancariaId || '';
+        if (!cuentasBancarias.some((cuenta) => cuenta.id === selectedCuentaBancariaId)) {
+            selectedCuentaBancariaId = cuentasBancarias[0]?.id || '';
+        }
+
+        const cuentaSeleccionada = cuentasBancarias.find((cuenta) => cuenta.id === selectedCuentaBancariaId) || null;
+
+        this.datosFacturacion.emisor = {
+            ...emisor,
+            banco: cuentaSeleccionada?.banco || String(emisor.banco || '').trim(),
+            cuenta: cuentaSeleccionada?.cuenta || String(emisor.cuenta || '').trim(),
+            cuentasBancarias,
+            selectedCuentaBancariaId
+        };
+    },
+
+    getCuentaBancariaSeleccionada() {
+        const cuentasBancarias = this.datosFacturacion?.emisor?.cuentasBancarias || [];
+        const selectedId = this.datosFacturacion?.emisor?.selectedCuentaBancariaId;
+        return cuentasBancarias.find((cuenta) => cuenta.id === selectedId) || null;
+    },
+
+    renderCuentaBancariaSelector() {
+        const select = document.getElementById('cuenta-bancaria-seleccionada');
+        if (!select) return;
+
+        const cuentasBancarias = this.datosFacturacion?.emisor?.cuentasBancarias || [];
+        const selectedId = this.datosFacturacion?.emisor?.selectedCuentaBancariaId || '';
+        select.innerHTML = '';
+
+        if (!cuentasBancarias.length) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No hay cuentas guardadas';
+            select.appendChild(option);
+            select.disabled = true;
+            return;
+        }
+
+        select.disabled = false;
+        cuentasBancarias.forEach((cuenta) => {
+            const option = document.createElement('option');
+            option.value = cuenta.id;
+            option.textContent = `${cuenta.banco} - ${cuenta.cuenta}`;
+            select.appendChild(option);
+        });
+        select.value = selectedId;
     },
 
     renderDatosFacturacionInputs() {
         const setIf = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        const cuentaSeleccionada = this.getCuentaBancariaSeleccionada();
         setIf('emisorNombre', this.datosFacturacion.emisor.nombre);
         setIf('emisorDireccion', this.datosFacturacion.emisor.direccion);
         setIf('emisorLocalidad', this.datosFacturacion.emisor.localidad);
         setIf('emisorDni', this.datosFacturacion.emisor.dni);
         setIf('emisorTelf', this.datosFacturacion.emisor.telf);
         setIf('emisorEmail', this.datosFacturacion.emisor.email);
-        setIf('emisorCuenta', this.datosFacturacion.emisor.cuenta);
-        setIf('emisorBanco', this.datosFacturacion.emisor.banco);
+        setIf('emisorCuenta', cuentaSeleccionada?.cuenta || this.datosFacturacion.emisor.cuenta);
+        setIf('emisorBanco', cuentaSeleccionada?.banco || this.datosFacturacion.emisor.banco);
 
         setIf('receptorNombre', this.datosFacturacion.receptor.nombre);
         setIf('receptorDireccion', this.datosFacturacion.receptor.direccion);
@@ -517,8 +746,28 @@ const app = {
         setIf('receptorCif', this.datosFacturacion.receptor.cif);
         setIf('receptorEmail', this.datosFacturacion.receptor.email);
         setIf('receptorTelf', this.datosFacturacion.receptor.telf);
+        this.renderCuentaBancariaSelector();
     },
     guardarDatosFacturacion() {
+        let cuentasBancarias = [...(this.datosFacturacion.emisor.cuentasBancarias || [])];
+        let selectedCuentaBancariaId = this.datosFacturacion.emisor.selectedCuentaBancariaId || '';
+        const bancoActual = document.getElementById('emisorBanco').value.trim();
+        const cuentaActual = document.getElementById('emisorCuenta').value.trim();
+        const selectedIndex = cuentasBancarias.findIndex((cuenta) => cuenta.id === selectedCuentaBancariaId);
+
+        if (selectedIndex >= 0) {
+            cuentasBancarias[selectedIndex] = {
+                ...cuentasBancarias[selectedIndex],
+                banco: bancoActual,
+                cuenta: cuentaActual
+            };
+        } else if (bancoActual || cuentaActual) {
+            selectedCuentaBancariaId = this.createCuentaBancariaId();
+            cuentasBancarias.push({ id: selectedCuentaBancariaId, banco: bancoActual, cuenta: cuentaActual });
+        }
+
+        cuentasBancarias = cuentasBancarias.filter((cuenta) => cuenta.banco || cuenta.cuenta);
+
         this.datosFacturacion.emisor = {
             nombre: document.getElementById('emisorNombre').value,
             direccion: document.getElementById('emisorDireccion').value,
@@ -526,8 +775,10 @@ const app = {
             dni: document.getElementById('emisorDni').value,
             telf: document.getElementById('emisorTelf').value,
             email: document.getElementById('emisorEmail').value,
-            cuenta: document.getElementById('emisorCuenta').value,
-            banco: document.getElementById('emisorBanco').value
+            cuenta: cuentaActual,
+            banco: bancoActual,
+            cuentasBancarias,
+            selectedCuentaBancariaId
         };
         this.datosFacturacion.receptor = {
             nombre: document.getElementById('receptorNombre').value,
@@ -537,8 +788,72 @@ const app = {
             email: document.getElementById('receptorEmail').value,
             telf: document.getElementById('receptorTelf').value
         };
+        this.normalizeDatosFacturacion();
+        this.renderDatosFacturacionInputs();
         this.saveData();
         this.showToast('success','Datos guardados correctamente', 4000);
+    },
+
+    addCuentaBancaria() {
+        const bancoInput = document.getElementById('nuevo-banco-emisor');
+        const cuentaInput = document.getElementById('nueva-cuenta-emisor');
+        if (!bancoInput || !cuentaInput) return;
+
+        const banco = bancoInput.value.trim();
+        const cuenta = cuentaInput.value.trim();
+        if (!banco || !cuenta) {
+            this.showToast('info', 'Introduce banco y número de cuenta', 4000);
+            return;
+        }
+
+        const cuentasBancarias = this.datosFacturacion.emisor.cuentasBancarias || [];
+        const duplicada = cuentasBancarias.some((item) => item.banco === banco && item.cuenta === cuenta);
+        if (duplicada) {
+            this.showToast('info', 'Esa cuenta ya está guardada', 4000);
+            return;
+        }
+
+        const nuevaCuenta = { id: this.createCuentaBancariaId(), banco, cuenta };
+        this.datosFacturacion.emisor.cuentasBancarias = [...cuentasBancarias, nuevaCuenta];
+        this.datosFacturacion.emisor.selectedCuentaBancariaId = nuevaCuenta.id;
+        this.datosFacturacion.emisor.banco = banco;
+        this.datosFacturacion.emisor.cuenta = cuenta;
+        this.renderDatosFacturacionInputs();
+        this.saveData();
+        bancoInput.value = '';
+        cuentaInput.value = '';
+        this.showToast('success', 'Cuenta bancaria guardada', 4000);
+    },
+
+    selectCuentaBancaria() {
+        const select = document.getElementById('cuenta-bancaria-seleccionada');
+        if (!select) return;
+
+        this.datosFacturacion.emisor.selectedCuentaBancariaId = select.value;
+        const cuentaSeleccionada = this.getCuentaBancariaSeleccionada();
+        this.datosFacturacion.emisor.banco = cuentaSeleccionada?.banco || '';
+        this.datosFacturacion.emisor.cuenta = cuentaSeleccionada?.cuenta || '';
+        this.renderDatosFacturacionInputs();
+        this.saveData();
+    },
+
+    deleteCuentaBancaria() {
+        const select = document.getElementById('cuenta-bancaria-seleccionada');
+        if (!select || !select.value) {
+            this.showToast('info', 'No hay cuenta seleccionada', 4000);
+            return;
+        }
+
+        const selectedId = select.value;
+        this.datosFacturacion.emisor.cuentasBancarias = (this.datosFacturacion.emisor.cuentasBancarias || [])
+            .filter((cuenta) => cuenta.id !== selectedId);
+        this.datosFacturacion.emisor.selectedCuentaBancariaId = this.datosFacturacion.emisor.cuentasBancarias[0]?.id || '';
+        const cuentaSeleccionada = this.getCuentaBancariaSeleccionada();
+        this.datosFacturacion.emisor.banco = cuentaSeleccionada?.banco || '';
+        this.datosFacturacion.emisor.cuenta = cuentaSeleccionada?.cuenta || '';
+        this.renderDatosFacturacionInputs();
+        this.saveData();
+        this.showToast('success', 'Cuenta bancaria eliminada', 4000);
     },
 
     toggleFacturacionIntegra() {
@@ -610,6 +925,27 @@ const app = {
         document.getElementById('toggle-facturacion-integra').addEventListener('click', () => this.toggleFacturacionIntegra());
         document.getElementById('facturacion-integra-retencion').addEventListener('change', () => this.updateFacturacionIntegraConfig());
         document.getElementById('facturacion-integra-iva').addEventListener('change', () => this.updateFacturacionIntegraConfig());
+        document.getElementById('cuenta-bancaria-seleccionada').addEventListener('change', () => this.selectCuentaBancaria());
+        document.getElementById('add-cuenta-bancaria').addEventListener('click', () => this.addCuentaBancaria());
+        document.getElementById('eliminar-cuenta-bancaria').addEventListener('click', () => this.deleteCuentaBancaria());
+        document.getElementById('facturas-history-list').addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.factura-history-edit');
+            if (editBtn) {
+                this.editFacturaEmitida(editBtn.dataset.id);
+                return;
+            }
+
+            const deleteBtn = e.target.closest('.factura-history-delete');
+            if (deleteBtn) {
+                this.deleteFacturaEmitida(deleteBtn.dataset.id);
+            }
+        });
+        document.getElementById('facturas-history-list').addEventListener('change', (e) => {
+            const statusSelect = e.target.closest('.factura-history-status-select');
+            if (statusSelect) {
+                this.updateEstadoCobroFactura(statusSelect.dataset.id, statusSelect.value);
+            }
+        });
 
         document.getElementById('avisos-list').addEventListener('change', (e) => {
             if (e.target && e.target.classList.contains('aviso-checkbox')) {
@@ -1356,6 +1692,7 @@ const app = {
 
         const em = this.datosFacturacion.emisor;
         const rec = this.datosFacturacion.receptor;
+        const cuentaSeleccionada = this.getCuentaBancariaSeleccionada();
         const fechaActual = formatDate(new Date());
 
         try {
@@ -1393,20 +1730,26 @@ const app = {
             doc.setFont(undefined, 'bold');
             doc.text('EMISOR', left, 124 + headerOffsetY); doc.text('RECEPTOR', left + 300, 124 + headerOffsetY);
             doc.setFont(undefined, 'normal'); doc.setFontSize(10);
-            doc.text([em.nombre, em.direccion, em.localidad, `DNI: ${em.dni}`, `Telf: ${em.telf}`], left, 142 + headerOffsetY);
+            doc.text([em.nombre, em.direccion, em.localidad, `DNI: ${em.dni}`, `Telf: ${em.telf}`, `Email: ${em.email}`], left, 142 + headerOffsetY);
             doc.text([rec.nombre, rec.direccion, rec.localidad, `CIF: ${rec.cif}`, `Telf: ${rec.telf}`], left + 300, 142 + headerOffsetY);
 
             // Tabla con anchos cuidados
             let y = 240 + headerOffsetY; // espacio extra antes de primera línea (solicitado)
+            const xAviso = left + 8;
+            const xFecha = left + 110;
+            const xAseguradora = left + 170;
+            const xConceptos = left + 300;
+            const xBase = right - 20;
+            const conceptoWidth = Math.max(120, xBase - xConceptos - 36);
 
             doc.setFont(undefined, 'bold');
             doc.setFillColor(245,245,245);
             doc.rect(left, y - 18, right - left, 18, 'F');
-            doc.text('Aviso', left + 8, y);
-            doc.text('Fecha', left + 110, y);
-            doc.text('Aseguradora', left + 170, y);
-            doc.text('Detalle Conceptos', left + 300, y);
-            doc.text('Base', right - 8, y, { align: 'right' }); // etiqueta simplificada: "Base"
+            doc.text('Aviso', xAviso, y);
+            doc.text('Fecha', xFecha, y);
+            doc.text('Aseguradora', xAseguradora, y);
+            doc.text('Detalle Conceptos', xConceptos, y);
+            doc.text('Base', xBase, y, { align: 'right' });
             y += 10;
             doc.setFont(undefined, 'normal');
 
@@ -1418,13 +1761,20 @@ const app = {
 
                 const numAvisoTxt = doc.splitTextToSize(av.numeroAviso || '', 80);
                 const asegTxt = doc.splitTextToSize(av.aseguradora || '', 120);
-                const conceptoTxt = doc.splitTextToSize(`M.O: ${av.manoObra.toFixed(2)}€ | Desp: ${av.importeDesplazamiento.toFixed(2)}€ | Rec: ${av.importeRecambios.toFixed(2)}€`, 200);
+                const conceptoParts = [
+                    `M.O.: ${av.manoObra.toFixed(2)}€`,
+                    `Desp.: ${av.importeDesplazamiento.toFixed(2)}€`
+                ];
+                if ((av.importeRecambios || 0) > 0) {
+                    conceptoParts.push(`Recambios: ${av.importeRecambios.toFixed(2)}€`);
+                }
+                const conceptoTxt = doc.splitTextToSize(conceptoParts.join(' | '), conceptoWidth);
 
-                doc.text(numAvisoTxt, left + 8, y);
-                doc.text(av.fechaAviso || '', left + 110, y);
-                doc.text(asegTxt, left + 170, y);
-                doc.text(conceptoTxt, left + 300, y);
-                doc.text(`${baseLinea.toFixed(2)}€`, right - 8, y, { align: 'right' });
+                doc.text(numAvisoTxt, xAviso, y);
+                doc.text(av.fechaAviso || '', xFecha, y);
+                doc.text(asegTxt, xAseguradora, y);
+                doc.text(conceptoTxt, xConceptos, y);
+                doc.text(`${baseLinea.toFixed(2)}€`, xBase, y, { align: 'right' });
 
                 const lines = Math.max(numAvisoTxt.length, asegTxt.length, conceptoTxt.length);
                 y += (lines * 12) + 8;
@@ -1444,10 +1794,38 @@ const app = {
             doc.setFontSize(13);
             doc.text(`TOTAL:`, xFact, y); doc.text(`${totalFactura.toFixed(2)}€`, right - 8, y, { align:'right' });
 
+            if (cuentaSeleccionada && (cuentaSeleccionada.banco || cuentaSeleccionada.cuenta)) {
+                if (y > doc.internal.pageSize.height - 110) { doc.addPage(); y = 80; }
+                y += 34;
+                doc.setDrawColor(214, 222, 232);
+                doc.setFillColor(249, 251, 253);
+                doc.roundedRect(xFact, y - 18, 250, 54, 6, 6, 'FD');
+                doc.setFont(undefined, 'bold');
+                doc.setFontSize(10);
+                doc.text('Datos bancarios para pago', xFact + 10, y - 2);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Banco: ${cuentaSeleccionada.banco}`, xFact + 10, y + 14);
+                doc.text(`Cuenta: ${cuentaSeleccionada.cuenta}`, xFact + 10, y + 30);
+            }
+
             // NO incluimos el desglose de reparto (solicitado eliminar)
 
             doc.save(`Factura_Nando_${num}.pdf`);
-            this.saveData();
+            this.registerFacturaEmitida({
+                numeroFactura: num,
+                fecha: fechaActual,
+                receptorNombre: rec.nombre || '',
+                modeLabel,
+                avisos: seleccionadosOrdenados.map((av) => av.numeroAviso || '').filter(Boolean),
+                baseImponible,
+                iva,
+                retencion,
+                total: totalFactura,
+                banco: cuentaSeleccionada?.banco || em.banco || '',
+                cuenta: cuentaSeleccionada?.cuenta || em.cuenta || '',
+                ivaRate,
+                retencionRate
+            });
             this.showToast('success','PDF descargado correctamente', 4000);
         } catch (err) {
             console.error(err);

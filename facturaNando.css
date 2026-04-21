@@ -332,6 +332,23 @@ button:active{ transform:scale(0.98); }
   margin-bottom:0;
 }
 
+.bank-account-box{
+  margin-top:12px;
+}
+
+.bank-account-box h5{
+  margin:0 0 10px;
+}
+
+.bank-account-actions{
+  display:flex;
+  align-items:end;
+}
+
+.bank-account-actions button{
+  width:100%;
+}
+
 /* Resumen de avisos */
 .avisos-summary{
   display:flex;
@@ -356,6 +373,71 @@ button:active{ transform:scale(0.98); }
 .summary-cerrado{
   background: linear-gradient(90deg,#39ff14,#00ff66);
   color:#021425;
+}
+
+.factura-history-item{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px;
+  border-radius:8px;
+  background: linear-gradient(90deg, rgba(22,33,48,0.8), rgba(13,21,32,0.8));
+  border:1px solid rgba(255,255,255,0.09);
+  margin-bottom:10px;
+}
+
+.factura-history-item strong{
+  color:var(--rojo-visible);
+}
+
+.factura-history-item small{
+  display:block;
+  color:var(--muted);
+}
+
+.factura-history-total{
+  min-width:140px;
+  text-align:right;
+}
+
+.factura-history-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+.factura-history-status{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:999px;
+  font-weight:800;
+  text-transform:capitalize;
+}
+
+.factura-history-status.pendiente{
+  background: rgba(255, 209, 102, 0.18);
+  color:#ffd166;
+}
+
+.factura-history-status.cobrada{
+  background: rgba(57, 255, 20, 0.18);
+  color:#39ff14;
+}
+
+.factura-history-status.anulada{
+  background: rgba(255, 59, 48, 0.18);
+  color:#ff8a8a;
+}
+
+.factura-history-status-select{
+  width:100%;
+  margin-top:10px;
+  margin-bottom:0;
+}
+
+.factura-history-empty{
+  color:var(--muted);
 }
 
 /* Avisos list */
@@ -461,6 +543,9 @@ button:active{ transform:scale(0.98); }
   .grid-2{ grid-template-columns:1fr; }
   .select-container{ flex-direction:column; align-items:stretch; }
   .aviso-item{ flex-direction:column; align-items:flex-start; }
+  .factura-history-item{ flex-direction:column; }
+  .factura-history-total{ text-align:left; min-width:0; }
+  .factura-history-actions{ justify-content:flex-start; flex-wrap:wrap; }
   .filter-controls{ gap:6px; }
   .bulk-actions{ gap:6px; }
   .facturacion-mode-bar{ flex-direction:column; align-items:stretch; }
