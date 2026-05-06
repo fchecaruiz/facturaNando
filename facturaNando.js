@@ -34,7 +34,7 @@ const app = {
             "HISENSE", "SVAN", "ASPES", "HIUNDAY"
         ],
         marca: [
-            "CORBERO", "HISENSE", "SVAN", "ASPES", "HIUNDAY", "SONY", "LG", "BOSCH"
+            "CORBERO", "HISENSE", "SVAN", "ASPES", "HIUNDAY", "SONY", "LG", "WHIRPOOL", "ANTENAS", "ELECTROLUX", "BADFAMILY", "SIEMENS", "BOSCH"
         ],
         tipoAparato: [
             "LAVADORA", "FRIGORÍFICO", "LAVAVAJILLAS", "HORNO",
