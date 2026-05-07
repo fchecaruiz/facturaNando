@@ -34,7 +34,7 @@ const app = {
             "HISENSE", "SVAN", "ASPES", "HIUNDAY"
         ],
         marca: [
-            "CORBERO", "HISENSE", "SVAN", "ASPES", "HIUNDAY", "SONY", "LG", "WHIRPOOL", "ANTENAS", "ELECTROLUX", "BADFAMILY", "SIEMENS", "BOSCH"
+            "CORBERO", "HISENSE", "SVAN", "ASPES", "HIUNDAY", "SONY", "LG", "WHIRPOOL", "ANTENAS", "ELECTROLUX", "BALAY", "SIEMENS", "BOSCH"
         ],
         tipoAparato: [
             "LAVADORA", "FRIGORÍFICO", "LAVAVAJILLAS", "HORNO",
@@ -86,7 +86,6 @@ const app = {
     isApplyingRemoteState: false,
 
     createUniqueAvisoId() {
-        // IDs estables y únicos para evitar colisiones al alternar cerrado/abierto.
         return `av-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     },
 
@@ -331,6 +330,7 @@ const app = {
             this.saveData();
         }
     },
+
     loadOpciones() {
         try {
             const stored = localStorage.getItem('facturaNandoOpciones');
@@ -349,6 +349,7 @@ const app = {
             localStorage.setItem('facturaNandoOpciones', JSON.stringify(this.opciones));
         }
     },
+
     loadAuthData() {
         try {
             const stored = localStorage.getItem('facturaNandoAuth');
@@ -767,6 +768,7 @@ const app = {
         setIf('receptorTelf', this.datosFacturacion.receptor.telf);
         this.renderCuentaBancariaSelector();
     },
+
     guardarDatosFacturacion() {
         let cuentasBancarias = [...(this.datosFacturacion.emisor.cuentasBancarias || [])];
         let selectedCuentaBancariaId = this.datosFacturacion.emisor.selectedCuentaBancariaId || '';
@@ -1025,6 +1027,7 @@ const app = {
         this.populateSelect('marca');
         this.populateSelect('tipoAparato');
     },
+
     populateSelect(selectId) {
         const sel = document.getElementById(selectId);
         if (!sel) return;
@@ -1093,20 +1096,25 @@ const app = {
                 const nuevo = prompt('Modifica la opción:', this.opciones[tipoLocal][idx]);
                 if (nuevo === null) return;
                 const up = nuevo.trim().toUpperCase();
-                if (!up) return this.showToast('info','Texto vacío', 4000);
-                if (this.opciones[tipoLocal].includes(up)) return this.showToast('info','La opción ya existe', 4000);
+                if (!up) return this.showToast('info', 'Texto vacío', 4000);
+                if (this.opciones[tipoLocal].includes(up)) return this.showToast('info', 'La opción ya existe', 4000);
                 this.opciones[tipoLocal][idx] = up;
                 this.saveData();
+                this.populateSelects();
+                this.populateFilterOptions();
                 this.openManageModal(tipoLocal);
             };
         });
+
         modalBody.querySelectorAll('.delete-btn').forEach(btn => {
             btn.onclick = () => {
                 const idx = parseInt(btn.dataset.idx, 10);
                 const tipoLocal = btn.dataset.tipo;
                 if (!confirm('Eliminar opción?')) return;
-                this.opciones[tipoLocal].splice(idx,1);
+                this.opciones[tipoLocal].splice(idx, 1);
                 this.saveData();
+                this.populateSelects();
+                this.populateFilterOptions();
                 this.openManageModal(tipoLocal);
             };
         });
@@ -1117,14 +1125,16 @@ const app = {
                 const input = document.getElementById(`nueva-opcion-${tipo}`);
                 if (!input) return;
                 const val = input.value.trim();
-                if (!val) { this.showToast('info','Introduce texto para añadir', 4000); return; }
+                if (!val) { this.showToast('info', 'Introduce texto para añadir', 4000); return; }
                 const up = val.toUpperCase();
                 if (!Array.isArray(this.opciones[tipo])) this.opciones[tipo] = [];
-                if (this.opciones[tipo].includes(up)) { this.showToast('info','La opción ya existe', 4000); input.value=''; return; }
+                if (this.opciones[tipo].includes(up)) { this.showToast('info', 'La opción ya existe', 4000); input.value = ''; return; }
                 this.opciones[tipo].push(up);
                 this.saveData();
+                this.populateSelects();
+                this.populateFilterOptions();
                 this.openManageModal(tipo);
-                this.showToast('success','Opción añadida', 4000);
+                this.showToast('success', 'Opción añadida', 4000);
             };
         }
     },
@@ -1146,23 +1156,22 @@ const app = {
         const importeRecambios = parseFloat(document.getElementById('importeRecambios').value) || 0;
         const observaciones = document.getElementById('observacionesAviso').value.trim();
 
-        if (!numeroAviso) { this.showToast('info','Introduce número de aviso', 4000); return; }
+        if (!numeroAviso) { this.showToast('info', 'Introduce número de aviso', 4000); return; }
 
-        if (!editId && this.avisos.some(a=>a.numeroAviso === numeroAviso)) { this.showToast('danger','Número de aviso duplicado', 4500, 'toast-critical'); return; }
+        if (!editId && this.avisos.some(a => a.numeroAviso === numeroAviso)) { this.showToast('danger', 'Número de aviso duplicado', 4500, 'toast-critical'); return; }
 
         if (editId) {
-            const idx = this.avisos.findIndex(a=>String(a.id)===String(editId));
-            if (idx===-1) { this.showToast('danger','Aviso no encontrado para actualizar', 4000); return; }
-            // Preserve cerrado / seleccionado states
+            const idx = this.avisos.findIndex(a => String(a.id) === String(editId));
+            if (idx === -1) { this.showToast('danger', 'Aviso no encontrado para actualizar', 4000); return; }
             const preserved = { cerrado: this.avisos[idx].cerrado || false, seleccionado: this.avisos[idx].seleccionado || false };
             this.avisos[idx] = { ...this.avisos[idx], numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, localidad, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, ...preserved };
             delete form.dataset.editId;
             document.getElementById('guardar-aviso-btn').textContent = 'Guardar Aviso';
-            this.showToast('info','Aviso actualizado', 4000);
+            this.showToast('info', 'Aviso actualizado', 4000);
         } else {
-            const nuevo = { id: this.createUniqueAvisoId(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, localidad, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, seleccionado:false, cerrado:false };
+            const nuevo = { id: this.createUniqueAvisoId(), numeroAviso, fechaAviso, aseguradora, marca, tipoAparato, nombreCliente, localidad, manoObra, desplazamientoKm, importeDesplazamiento, codigoRecambio, importeRecambios, observaciones, seleccionado: false, cerrado: false };
             this.avisos.push(nuevo);
-            this.showToast('success','Aviso registrado', 4000);
+            this.showToast('success', 'Aviso registrado', 4000);
         }
         this.saveData();
         this.displayAvisos();
@@ -1174,7 +1183,6 @@ const app = {
         const idx = this.avisos.findIndex(a => String(a.id) === String(id));
         if (idx === -1) return;
         this.avisos[idx].cerrado = !this.avisos[idx].cerrado;
-        // If marking as abierto, also unselect for facturación
         if (!this.avisos[idx].cerrado) this.avisos[idx].seleccionado = false;
         this.saveData();
         this.displayAvisos();
@@ -1182,9 +1190,9 @@ const app = {
 
     deleteAviso(id) {
         if (!confirm('¿Estás seguro de eliminar este aviso?')) return;
-        const idx = this.avisos.findIndex(a => String(a.id)===String(id));
+        const idx = this.avisos.findIndex(a => String(a.id) === String(id));
         if (idx === -1) return;
-        const removed = this.avisos.splice(idx,1);
+        const removed = this.avisos.splice(idx, 1);
         this.saveData();
         this.displayAvisos();
         this.updateFacturaPreview();
@@ -1194,7 +1202,6 @@ const app = {
     editAviso(id) {
         const avis = this.avisos.find(a => String(a.id) === String(id));
         if (!avis) return;
-        // Fill form and set editId (do NOT remove from array)
         document.getElementById('numeroAviso').value = avis.numeroAviso;
         document.getElementById('fechaAviso').value = avis.fechaAviso;
         document.getElementById('aseguradora').value = avis.aseguradora;
@@ -1211,7 +1218,7 @@ const app = {
         document.getElementById('aviso-form').dataset.editId = id;
         document.getElementById('guardar-aviso-btn').textContent = 'Actualizar Aviso';
         document.getElementById('aviso-form-section').scrollIntoView({ behavior: 'smooth' });
-        this.showToast('info','Editando aviso (actualiza y guarda)', 4000);
+        this.showToast('info', 'Editando aviso (actualiza y guarda)', 4000);
     },
 
     renderAvisosSummary() {
@@ -1298,15 +1305,12 @@ const app = {
             container.appendChild(div);
         });
 
-        // event handlers for edit/delete
         container.querySelectorAll('.edit-btn-small').forEach(b => {
             b.onclick = () => this.editAviso(b.dataset.id);
         });
         container.querySelectorAll('.delete-btn-small').forEach(b => {
             b.onclick = () => this.deleteAviso(b.dataset.id);
         });
-
-        // handlers for cerrar toggle
         container.querySelectorAll('.cerrado-toggle').forEach(el => {
             el.onclick = () => this.toggleCerrado(el.dataset.id);
         });
@@ -1324,24 +1328,11 @@ const app = {
     buildAvisoSearchText(aviso, year = '', month = '') {
         const estado = aviso.cerrado ? 'cerrado' : 'abierto';
         const haystack = [
-            aviso.numeroAviso,
-            aviso.fechaAviso,
-            aviso.aseguradora,
-            aviso.marca,
-            aviso.tipoAparato,
-            aviso.nombreCliente,
-            aviso.localidad,
-            aviso.codigoRecambio,
-            aviso.observaciones,
-            aviso.manoObra,
-            aviso.desplazamientoKm,
-            aviso.importeDesplazamiento,
-            aviso.importeRecambios,
-            year,
-            month,
-            estado,
-            this.datosFacturacion?.receptor?.nombre,
-            this.datosFacturacion?.receptor?.cif
+            aviso.numeroAviso, aviso.fechaAviso, aviso.aseguradora, aviso.marca,
+            aviso.tipoAparato, aviso.nombreCliente, aviso.localidad, aviso.codigoRecambio,
+            aviso.observaciones, aviso.manoObra, aviso.desplazamientoKm,
+            aviso.importeDesplazamiento, aviso.importeRecambios, year, month, estado,
+            this.datosFacturacion?.receptor?.nombre, this.datosFacturacion?.receptor?.cif
         ];
         return this.normalizeSearchText(haystack.join(' '));
     },
@@ -1359,11 +1350,11 @@ const app = {
         if (mode === 'all') {
             this.activeSelectionFilter = null;
             this.avisos.forEach(av => { av.seleccionado = true; });
-            this.showToast('success','Todos los avisos seleccionados', 4000);
+            this.showToast('success', 'Todos los avisos seleccionados', 4000);
         } else if (mode === 'none') {
             this.activeSelectionFilter = null;
             this.avisos.forEach(av => av.seleccionado = false);
-            this.showToast('info','Selección eliminada', 3000);
+            this.showToast('info', 'Selección eliminada', 3000);
         }
         this.saveData();
         this.displayAvisos();
@@ -1391,18 +1382,15 @@ const app = {
             const yearOk = !filter.year || String(year) === String(filter.year);
             return yearOk && Array.isArray(filter.months) && filter.months.includes(month);
         }
-
         if (filter.mode === 'year') {
             const year = dt.getFullYear();
             return Array.isArray(filter.years) && filter.years.includes(year);
         }
-
         if (filter.mode === 'week') {
             const iso = getISOWeekInfo(dt);
-            const key = `${iso.year}-W${String(iso.week).padStart(2,'0')}`;
+            const key = `${iso.year}-W${String(iso.week).padStart(2, '0')}`;
             return Array.isArray(filter.weeks) && filter.weeks.includes(key);
         }
-
         return true;
     },
 
@@ -1417,30 +1405,24 @@ const app = {
                 : 'abiertos y cerrados';
 
         if (filter.mode === 'month') {
-            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-            const monthsLabel = Array.isArray(filter.months)
-                ? filter.months.map(m => monthNames[m - 1] || String(m)).join(', ')
-                : '';
+            const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            const monthsLabel = Array.isArray(filter.months) ? filter.months.map(m => monthNames[m - 1] || String(m)).join(', ') : '';
             const yearLabel = filter.year ? ` (${filter.year})` : '';
             return `Mes: ${monthsLabel}${yearLabel} | ${statusText}`;
         }
-
         if (filter.mode === 'year') {
             const yearsLabel = Array.isArray(filter.years) ? filter.years.join(', ') : '';
             return `Año: ${yearsLabel} | ${statusText}`;
         }
-
         if (filter.mode === 'week') {
             const weeksLabel = Array.isArray(filter.weeks) ? filter.weeks.join(', ') : '';
             return `Semana: ${weeksLabel} | ${statusText}`;
         }
-
         return '';
     },
 
     parseAvisoDate(rawDate) {
         if (!rawDate || typeof rawDate !== 'string') return null;
-
         const trimmed = rawDate.trim();
 
         if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
@@ -1448,18 +1430,13 @@ const app = {
             return Number.isNaN(isoDate.getTime()) ? null : isoDate;
         }
 
-        const match = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+        const match = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
         if (match) {
             const day = parseInt(match[1], 10);
             const month = parseInt(match[2], 10) - 1;
             const year = parseInt(match[3], 10);
             const parsed = new Date(year, month, day);
-
-            if (
-                parsed.getFullYear() === year &&
-                parsed.getMonth() === month &&
-                parsed.getDate() === day
-            ) {
+            if (parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day) {
                 return parsed;
             }
         }
@@ -1477,10 +1454,7 @@ const app = {
                     canvas.width = img.naturalWidth || 1200;
                     canvas.height = img.naturalHeight || 320;
                     const ctx = canvas.getContext('2d');
-                    if (!ctx) {
-                        resolve(null);
-                        return;
-                    }
+                    if (!ctx) { resolve(null); return; }
                     ctx.drawImage(img, 0, 0);
                     resolve(canvas.toDataURL('image/png'));
                 } catch (e) {
@@ -1523,12 +1497,12 @@ const app = {
             }).filter(Boolean))].sort((a,b)=>b-a);
             const ySel = document.createElement('select'); ySel.id = 'sel-month-year';
             if (years.length) {
-                years.forEach(y=> { const o = document.createElement('option'); o.value = y; o.textContent = y; ySel.appendChild(o); });
+                years.forEach(y => { const o = document.createElement('option'); o.value = y; o.textContent = y; ySel.appendChild(o); });
             } else {
                 ySel.innerHTML = '<option value="">(sin años)</option>';
             }
             const monthsHtml = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-                .map((m,i)=>`<label style="display:inline-block; margin:6px;"><input type="checkbox" data-month="${i+1}"> ${m}</label>`).join('');
+                .map((m, i) => `<label style="display:inline-block; margin:6px;"><input type="checkbox" data-month="${i+1}"> ${m}</label>`).join('');
             body.innerHTML += `<div style="text-align:center; margin-bottom:8px;"><strong>Año:</strong> </div><div style="text-align:center; margin-bottom:10px;">${ySel.outerHTML}</div><div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">${monthsHtml}</div>`;
         } else if (mode === 'year') {
             const years = [...new Set(this.avisos.map(a => {
@@ -1536,9 +1510,7 @@ const app = {
                 return dt ? dt.getFullYear() : null;
             }).filter(Boolean))].sort((a,b)=>b-a);
             if (!years.length) body.innerHTML += '<p style="text-align:center;">No hay años disponibles en los avisos.</p>';
-            else {
-                body.innerHTML += years.map(y=>`<label style="display:block; text-align:center; margin:6px;"><input type="checkbox" data-year="${y}"> ${y}</label>`).join('');
-            }
+            else body.innerHTML += years.map(y => `<label style="display:block; text-align:center; margin:6px;"><input type="checkbox" data-year="${y}"> ${y}</label>`).join('');
         } else if (mode === 'week') {
             const weeksMap = {};
             this.avisos.forEach(av => {
@@ -1546,14 +1518,14 @@ const app = {
                 const dt = this.parseAvisoDate(av.fechaAviso);
                 if (!dt) return;
                 const iso = getISOWeekInfo(dt);
-                const key = `${iso.year}-W${String(iso.week).padStart(2,'0')}`;
+                const key = `${iso.year}-W${String(iso.week).padStart(2, '0')}`;
                 if (!weeksMap[key]) weeksMap[key] = { start: iso.start, end: iso.end, count: 0 };
                 weeksMap[key].count++;
             });
             const entries = Object.keys(weeksMap).sort().reverse();
             if (!entries.length) body.innerHTML += '<p style="text-align:center;">No hay semanas disponibles en los avisos.</p>';
             else {
-                body.innerHTML += entries.map(k=>{
+                body.innerHTML += entries.map(k => {
                     const w = weeksMap[k];
                     const label = `${k} (${formatDate(w.start)} → ${formatDate(w.end)}) - ${w.count} aviso(s)`;
                     return `<label style="display:block; margin:6px;"><input type="checkbox" data-week="${k}"> ${label}</label>`;
@@ -1563,34 +1535,30 @@ const app = {
 
         modal.style.display = 'block';
     },
+
     closeSelectionModal() {
         document.getElementById('select-modal').style.display = 'none';
     },
+
     applySelectionFromModal() {
         const mode = this.selectionMode;
         if (!mode) return;
         const body = document.getElementById('select-modal-body');
         const statusMode = this.getSelectionStatusMode();
 
-        // La selección por mes/semana/año debe sustituir la selección actual, no acumularla.
-        this.avisos.forEach(av => {
-            av.seleccionado = false;
-        });
+        this.avisos.forEach(av => { av.seleccionado = false; });
 
         if (mode === 'month') {
             const monthChecks = Array.from(body.querySelectorAll('input[data-month]')).filter(cb => cb.checked);
             if (!monthChecks.length) {
                 this.activeSelectionFilter = null;
-                this.displayAvisos();
-                this.updateFacturaPreview();
-                this.closeSelectionModal();
-                this.showToast('info','Sin selección: se muestran todos los avisos', 4000);
+                this.displayAvisos(); this.updateFacturaPreview(); this.closeSelectionModal();
+                this.showToast('info', 'Sin selección: se muestran todos los avisos', 4000);
                 return;
             }
-
             const yearSel = document.getElementById('sel-month-year');
             const year = yearSel ? yearSel.value : null;
-            const months = monthChecks.map(cb => parseInt(cb.dataset.month,10));
+            const months = monthChecks.map(cb => parseInt(cb.dataset.month, 10));
             this.activeSelectionFilter = { mode: 'month', year, months, statusMode };
             this.avisos.forEach(av => {
                 if (!av.fechaAviso) return;
@@ -1606,33 +1574,26 @@ const app = {
             const yearChecks = Array.from(body.querySelectorAll('input[data-year]')).filter(cb => cb.checked);
             if (!yearChecks.length) {
                 this.activeSelectionFilter = null;
-                this.displayAvisos();
-                this.updateFacturaPreview();
-                this.closeSelectionModal();
-                this.showToast('info','Sin selección: se muestran todos los avisos', 4000);
+                this.displayAvisos(); this.updateFacturaPreview(); this.closeSelectionModal();
+                this.showToast('info', 'Sin selección: se muestran todos los avisos', 4000);
                 return;
             }
-
-            const years = yearChecks.map(cb => parseInt(cb.dataset.year,10));
+            const years = yearChecks.map(cb => parseInt(cb.dataset.year, 10));
             this.activeSelectionFilter = { mode: 'year', years, statusMode };
             this.avisos.forEach(av => {
                 if (!av.fechaAviso) return;
                 const dt = this.parseAvisoDate(av.fechaAviso);
                 if (!dt) return;
-                const y = dt.getFullYear();
-                if (years.includes(y) && this.statusMatchesSelection(av, statusMode)) av.seleccionado = true;
+                if (years.includes(dt.getFullYear()) && this.statusMatchesSelection(av, statusMode)) av.seleccionado = true;
             });
         } else if (mode === 'week') {
             const weekChecks = Array.from(body.querySelectorAll('input[data-week]')).filter(cb => cb.checked);
             if (!weekChecks.length) {
                 this.activeSelectionFilter = null;
-                this.displayAvisos();
-                this.updateFacturaPreview();
-                this.closeSelectionModal();
-                this.showToast('info','Sin selección: se muestran todos los avisos', 4000);
+                this.displayAvisos(); this.updateFacturaPreview(); this.closeSelectionModal();
+                this.showToast('info', 'Sin selección: se muestran todos los avisos', 4000);
                 return;
             }
-
             const weeks = weekChecks.map(cb => cb.dataset.week);
             this.activeSelectionFilter = { mode: 'week', weeks, statusMode };
             this.avisos.forEach(av => {
@@ -1640,7 +1601,7 @@ const app = {
                 const dt = this.parseAvisoDate(av.fechaAviso);
                 if (!dt) return;
                 const iso = getISOWeekInfo(dt);
-                const key = `${iso.year}-W${String(iso.week).padStart(2,'0')}`;
+                const key = `${iso.year}-W${String(iso.week).padStart(2, '0')}`;
                 if (weeks.includes(key) && this.statusMatchesSelection(av, statusMode)) av.seleccionado = true;
             });
         }
@@ -1650,7 +1611,7 @@ const app = {
         this.displayAvisos();
         this.updateFacturaPreview();
         this.closeSelectionModal();
-        this.showToast('success',`Selección aplicada: ${totalSeleccionados} aviso(s)`, 4000);
+        this.showToast('success', `Selección aplicada: ${totalSeleccionados} aviso(s)`, 4000);
     },
 
     updateFacturaPreview() {
@@ -1658,7 +1619,11 @@ const app = {
         const generarBtn = document.getElementById('generar-factura-pdf');
         const seleccionados = this.avisos.filter(a => a.seleccionado);
         this.syncFacturacionIntegraControls();
-        if (!seleccionados.length) { preview.innerHTML = '<p class="no-seleccion">No hay avisos seleccionados para facturar.</p>'; generarBtn.disabled = true; return; }
+        if (!seleccionados.length) {
+            preview.innerHTML = '<p class="no-seleccion">No hay avisos seleccionados para facturar.</p>';
+            generarBtn.disabled = true;
+            return;
+        }
 
         const calculo = this.calculateFacturaTotals(seleccionados);
         const { modeLabel, baseTotal, base75Total, base25Total, baseImponible, retencion, iva, totalFactura, retencionRate, ivaRate, showBreakdown } = calculo;
@@ -1675,7 +1640,7 @@ const app = {
             <hr>
             <h5>Detalle de avisos</h5>
             <ul>
-                ${seleccionados.map(av=>{
+                ${seleccionados.map(av => {
                     const subtotal = ((av.manoObra||0)+(av.importeDesplazamiento||0)+(av.importeRecambios||0)).toFixed(2);
                     const b75 = (parseFloat(subtotal) * 0.75).toFixed(2);
                     return `<li>Nº ${av.numeroAviso} — ${av.fechaAviso || ''} — Subtotal ${subtotal}€${showBreakdown ? ` — 75%: ${b75}€` : ''}</li>`;
@@ -1687,12 +1652,11 @@ const app = {
 
     async generarFacturaPDF() {
         const seleccionados = this.avisos.filter(a => a.seleccionado);
-        if (!seleccionados.length) { this.showToast('info','No hay avisos seleccionados', 4000); return; }
+        if (!seleccionados.length) { this.showToast('info', 'No hay avisos seleccionados', 4000); return; }
 
-        // double-check: todos seleccionados deben estar cerrados
         const abiertos = seleccionados.filter(s => !s.cerrado);
         if (abiertos.length) {
-            this.showToast('danger','Hay avisos seleccionados que no están cerrados. No se puede facturar.', 4000);
+            this.showToast('danger', 'Hay avisos seleccionados que no están cerrados. No se puede facturar.', 4000);
             return;
         }
 
@@ -1702,11 +1666,11 @@ const app = {
         }
 
         this.ultimoNumeroFactura++;
-        let defaultNum = `FAC-${String(this.ultimoNumeroFactura).padStart(4,'0')}`;
+        let defaultNum = `FAC-${String(this.ultimoNumeroFactura).padStart(4, '0')}`;
         let num = prompt('Introduce número de factura:', defaultNum);
         if (num === null) { this.ultimoNumeroFactura--; return; }
 
-        const seleccionadosOrdenados = [...seleccionados].sort((a,b) => {
+        const seleccionadosOrdenados = [...seleccionados].sort((a, b) => {
             const dateA = this.parseAvisoDate(a.fechaAviso);
             const dateB = this.parseAvisoDate(b.fechaAviso);
             return (dateA ? dateA.getTime() : 0) - (dateB ? dateB.getTime() : 0);
@@ -1731,43 +1695,35 @@ const app = {
 
             if (logoDataUrl) {
                 try {
-                    const logoWidth = 220;
-                    const logoHeight = 58;
+                    const logoWidth = 220, logoHeight = 58;
                     const logoX = (pageW - logoWidth) / 2;
                     doc.addImage(logoDataUrl, 'PNG', logoX, 20, logoWidth, logoHeight);
                     hasLogo = true;
                     headerOffsetY = 46;
-                } catch (e) {
-                    // Si falla el logo, la factura se genera igualmente.
-                }
+                } catch (e) { /* continúa sin logo */ }
             }
 
-            // Cabecera
             doc.setFontSize(18); doc.setFont(undefined, 'bold');
-            doc.text('FACTURA', pageW / 2, hasLogo ? 92 : 46, { align:'center' });
+            doc.text('FACTURA', pageW / 2, hasLogo ? 92 : 46, { align: 'center' });
 
             doc.setFontSize(10); doc.setFont(undefined, 'normal');
             doc.text(`Nº Factura: ${num}`, left, 80 + headerOffsetY);
             doc.text(`Fecha: ${fechaActual}`, left, 98 + headerOffsetY);
 
-            // Emisor y Receptor (PDF)
             doc.setFont(undefined, 'bold');
-            doc.text('EMISOR', left, 124 + headerOffsetY); doc.text('RECEPTOR', left + 300, 124 + headerOffsetY);
+            doc.text('EMISOR', left, 124 + headerOffsetY);
+            doc.text('RECEPTOR', left + 300, 124 + headerOffsetY);
             doc.setFont(undefined, 'normal'); doc.setFontSize(10);
             doc.text([em.nombre, em.direccion, em.localidad, `DNI: ${em.dni}`, `Telf: ${em.telf}`, `Email: ${em.email}`], left, 142 + headerOffsetY);
             doc.text([rec.nombre, rec.direccion, rec.localidad, `CIF: ${rec.cif}`, `Telf: ${rec.telf}`], left + 300, 142 + headerOffsetY);
 
-            // Tabla con anchos cuidados
-            let y = 240 + headerOffsetY; // espacio extra antes de primera línea (solicitado)
-            const xAviso = left + 8;
-            const xFecha = left + 110;
-            const xAseguradora = left + 170;
-            const xConceptos = left + 300;
-            const xBase = right - 20;
+            let y = 240 + headerOffsetY;
+            const xAviso = left + 8, xFecha = left + 110, xAseguradora = left + 170;
+            const xConceptos = left + 300, xBase = right - 20;
             const conceptoWidth = Math.max(120, xBase - xConceptos - 36);
 
             doc.setFont(undefined, 'bold');
-            doc.setFillColor(245,245,245);
+            doc.setFillColor(245, 245, 245);
             doc.rect(left, y - 18, right - left, 18, 'F');
             doc.text('Aviso', xAviso, y);
             doc.text('Fecha', xFecha, y);
@@ -1785,13 +1741,8 @@ const app = {
 
                 const numAvisoTxt = doc.splitTextToSize(av.numeroAviso || '', 80);
                 const asegTxt = doc.splitTextToSize(av.aseguradora || '', 120);
-                const conceptoParts = [
-                    `M.O.: ${av.manoObra.toFixed(2)}€`,
-                    `Desp.: ${av.importeDesplazamiento.toFixed(2)}€`
-                ];
-                if ((av.importeRecambios || 0) > 0) {
-                    conceptoParts.push(`Recambios: ${av.importeRecambios.toFixed(2)}€`);
-                }
+                const conceptoParts = [`M.O.: ${av.manoObra.toFixed(2)}€`, `Desp.: ${av.importeDesplazamiento.toFixed(2)}€`];
+                if ((av.importeRecambios || 0) > 0) conceptoParts.push(`Recambios: ${av.importeRecambios.toFixed(2)}€`);
                 const conceptoTxt = doc.splitTextToSize(conceptoParts.join(' | '), conceptoWidth);
 
                 doc.text(numAvisoTxt, xAviso, y);
@@ -1804,19 +1755,18 @@ const app = {
                 y += (lines * 12) + 8;
             });
 
-            // Totales (ordenado según petición)
             if (y > doc.internal.pageSize.height - 140) { doc.addPage(); y = 80; }
             y += 6;
             doc.setFont(undefined, 'bold'); doc.setFontSize(11);
             const xFact = right - 260;
 
             doc.text(`Modo: ${modeLabel}`, xFact, y); y += 16;
-            doc.text(`Base imponible:`, xFact, y); doc.text(`${baseImponible.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
-            doc.text(`Retención (${retencionRate}%):`, xFact, y); doc.text(`-${retencion.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 16;
-            doc.text(`IVA (${ivaRate}%):`, xFact, y); doc.text(`${iva.toFixed(2)}€`, right - 8, y, { align:'right' }); y += 20;
+            doc.text(`Base imponible:`, xFact, y); doc.text(`${baseImponible.toFixed(2)}€`, right - 8, y, { align: 'right' }); y += 16;
+            doc.text(`Retención (${retencionRate}%):`, xFact, y); doc.text(`-${retencion.toFixed(2)}€`, right - 8, y, { align: 'right' }); y += 16;
+            doc.text(`IVA (${ivaRate}%):`, xFact, y); doc.text(`${iva.toFixed(2)}€`, right - 8, y, { align: 'right' }); y += 20;
 
             doc.setFontSize(13);
-            doc.text(`TOTAL:`, xFact, y); doc.text(`${totalFactura.toFixed(2)}€`, right - 8, y, { align:'right' });
+            doc.text(`TOTAL:`, xFact, y); doc.text(`${totalFactura.toFixed(2)}€`, right - 8, y, { align: 'right' });
 
             if (cuentaSeleccionada && (cuentaSeleccionada.banco || cuentaSeleccionada.cuenta)) {
                 if (y > doc.internal.pageSize.height - 110) { doc.addPage(); y = 80; }
@@ -1824,15 +1774,12 @@ const app = {
                 doc.setDrawColor(214, 222, 232);
                 doc.setFillColor(249, 251, 253);
                 doc.roundedRect(xFact, y - 18, 250, 54, 6, 6, 'FD');
-                doc.setFont(undefined, 'bold');
-                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold'); doc.setFontSize(10);
                 doc.text('Datos bancarios para pago', xFact + 10, y - 2);
                 doc.setFont(undefined, 'normal');
                 doc.text(`Banco: ${cuentaSeleccionada.banco}`, xFact + 10, y + 14);
                 doc.text(`Cuenta: ${cuentaSeleccionada.cuenta}`, xFact + 10, y + 30);
             }
-
-            // NO incluimos el desglose de reparto (solicitado eliminar)
 
             doc.save(`Factura_Nando_${num}.pdf`);
             this.registerFacturaEmitida({
@@ -1841,16 +1788,12 @@ const app = {
                 receptorNombre: rec.nombre || '',
                 modeLabel,
                 avisos: seleccionadosOrdenados.map((av) => av.numeroAviso || '').filter(Boolean),
-                baseImponible,
-                iva,
-                retencion,
-                total: totalFactura,
+                baseImponible, iva, retencion, total: totalFactura,
                 banco: cuentaSeleccionada?.banco || em.banco || '',
                 cuenta: cuentaSeleccionada?.cuenta || em.cuenta || '',
-                ivaRate,
-                retencionRate
+                ivaRate, retencionRate
             });
-            this.showToast('success','PDF descargado correctamente', 4000);
+            this.showToast('success', 'PDF descargado correctamente', 4000);
         } catch (err) {
             console.error(err);
             alert("Error crítico al generar el PDF.");
@@ -1860,7 +1803,6 @@ const app = {
     resetNumeroFactura() {
         const confirmado = confirm('¿Quieres reiniciar la numeración de facturas? La siguiente será FAC-0001.');
         if (!confirmado) return;
-
         this.ultimoNumeroFactura = 0;
         this.saveData();
         this.showToast('success', 'Numeración reiniciada. La siguiente factura será FAC-0001.', 4500);
@@ -1873,21 +1815,16 @@ const app = {
         t.className = `toast ${type}${extraClass ? ` ${extraClass}` : ''}`;
         t.textContent = message;
         container.appendChild(t);
-        // for CSS animation
         requestAnimationFrame(() => t.classList.add('show'));
-        // remove after duration: fade out then remove
         setTimeout(() => {
             t.classList.remove('show');
-            // wait for transition then remove
             setTimeout(() => { if (t && t.parentNode) t.parentNode.removeChild(t); }, 300);
         }, duration);
     }
 };
 
 app.calculateFacturaTotals = function(avisos = []) {
-    let baseTotal = 0;
-    let base75Total = 0;
-    let base25Total = 0;
+    let baseTotal = 0, base75Total = 0, base25Total = 0;
 
     avisos.forEach(av => {
         const subtotal = (av.manoObra || 0) + (av.importeDesplazamiento || 0) + (av.importeRecambios || 0);
@@ -1907,62 +1844,33 @@ app.calculateFacturaTotals = function(avisos = []) {
         const retencion = parseFloat((baseImponible * (retencionRate / 100)).toFixed(2));
         const iva = parseFloat((baseImponible * (ivaRate / 100)).toFixed(2));
         const totalFactura = parseFloat((baseImponible - retencion + iva).toFixed(2));
-
-        return {
-            modeLabel: 'Facturación íntegra',
-            baseTotal,
-            base75Total,
-            base25Total,
-            baseImponible,
-            retencion,
-            iva,
-            totalFactura,
-            retencionRate,
-            ivaRate,
-            showBreakdown: false
-        };
+        return { modeLabel: 'Facturación íntegra', baseTotal, base75Total, base25Total, baseImponible, retencion, iva, totalFactura, retencionRate, ivaRate, showBreakdown: false };
     }
 
-    const retencionRate = 15;
-    const ivaRate = 21;
+    const retencionRate = 15, ivaRate = 21;
     const baseImponible = base75Total;
     const retencion = parseFloat((baseImponible * (retencionRate / 100)).toFixed(2));
     const iva = parseFloat((baseImponible * (ivaRate / 100)).toFixed(2));
     const totalFactura = parseFloat((baseImponible - retencion + iva).toFixed(2));
-
-    return {
-        modeLabel: 'Reparto 75/25',
-        baseTotal,
-        base75Total,
-        base25Total,
-        baseImponible,
-        retencion,
-        iva,
-        totalFactura,
-        retencionRate,
-        ivaRate,
-        showBreakdown: true
-    };
+    return { modeLabel: 'Reparto 75/25', baseTotal, base75Total, base25Total, baseImponible, retencion, iva, totalFactura, retencionRate, ivaRate, showBreakdown: true };
 };
 
 function formatDate(d) {
     const dt = new Date(d);
-    return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
+    return `${String(dt.getDate()).padStart(2, '0')}-${String(dt.getMonth() + 1).padStart(2, '0')}-${dt.getFullYear()}`;
 }
 
-/* util: ISO week info (start date, end date, week number, year) */
-function getISOWeekInfo(date){
+function getISOWeekInfo(date) {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-    // compute start/end
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     const start = new Date(d);
     start.setUTCDate(start.getUTCDate() - (start.getUTCDay() || 7) + 1);
     const end = new Date(start);
     end.setUTCDate(end.getUTCDate() + 6);
-    return { year: d.getUTCFullYear(), week: weekNo, start: start, end: end };
+    return { year: d.getUTCFullYear(), week: weekNo, start, end };
 }
 
 document.addEventListener('DOMContentLoaded', () => app.init());
